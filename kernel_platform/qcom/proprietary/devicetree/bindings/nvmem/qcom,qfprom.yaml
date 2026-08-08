@@ -16,7 +16,6 @@ properties:
   compatible:
     items:
       - enum:
-          - qcom,parrot-qfprom
           - qcom,ravelin-qfprom
           - qcom,sc7180-qfprom
           - qcom,sdm845-qfprom

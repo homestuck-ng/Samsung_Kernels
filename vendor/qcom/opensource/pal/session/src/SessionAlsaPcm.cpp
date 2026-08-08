@@ -1126,12 +1126,21 @@ set_mixer:
 
 #ifdef SEC_AUDIO_INTERPRETER_MODE
             if (sAttr.type == PAL_STREAM_DEEP_BUFFER) {
-               if (strstr(dAttr.custom_config.custom_key, "interpreter_")) {
-                   s->setInterpreterMode(rm->interpreter_mode);
-                   PAL_DBG(LOG_TAG,"Interpreter set mode %d", s->getInterpreterMode());
-                   if (setConfig(s, MODULE, INTERPRETER_MODE_TAG)) {
-                       PAL_DBG(LOG_TAG, "Interpreter mode setting failed");
-                   }
+                status = s->getAssociatedDevices(associatedDevices);
+                if (0 == status) {
+                    for (int i = 0; i < associatedDevices.size();i++) {
+                        status = associatedDevices[i]->getDeviceAttributes(&dAttr);
+                        if (0 == status) {
+                            if (strstr(dAttr.custom_config.custom_key, "interpreter_")) {
+                                s->setInterpreterMode(rm->interpreter_mode);
+                                PAL_DBG(LOG_TAG,"Interpreter set mode %d", s->getInterpreterMode());
+                                if (setConfig(s, MODULE, INTERPRETER_MODE_TAG)) {
+                                    PAL_DBG(LOG_TAG, "Interpreter mode setting failed");
+                                }
+                            }
+                            break;
+                        }
+                    }
                 }
             }
 #endif

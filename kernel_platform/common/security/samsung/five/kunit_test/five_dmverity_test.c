@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (c) 2020 Samsung Electronics Co., Ltd. All Rights Reserved
  *
@@ -6,7 +5,6 @@
  * under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation.
  */
-
 #include <linux/version.h>
 #include "drivers/md/dm.h"
 #include "drivers/md/dm-core.h"

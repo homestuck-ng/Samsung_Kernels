@@ -41,9 +41,6 @@ obj-$(CONFIG_BPF_LSM)			+= bpf/
 subdir-$(CONFIG_INTEGRITY)		+= integrity
 obj-$(CONFIG_INTEGRITY)			+= integrity/
 
-# KNOX ZT
-obj-$(CONFIG_KZT) += kzt/
-
 # KNOX DAR
 obj-$(CONFIG_SDP) += sdp/
 obj-$(CONFIG_SDP) += sdp/built-in.a

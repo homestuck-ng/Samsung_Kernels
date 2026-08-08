@@ -493,7 +493,6 @@ struct owe_transition_mode_info {
  * @lost_link_rssi: lost link RSSI
  * @roam_sync_frame_ind: roam sync frame ind
  * @roam_band_bitmask: This allows the driver to roam within this band
- * @is_disable_btm: btm roaming disabled or not from userspace
  */
 struct rso_config {
 #ifdef WLAN_FEATURE_HOST_ROAM
@@ -540,7 +539,6 @@ struct rso_config {
 	int32_t lost_link_rssi;
 	struct roam_synch_frame_ind roam_sync_frame_ind;
 	uint32_t roam_band_bitmask;
-	bool is_disable_btm;
 };
 
 /**
@@ -647,7 +645,6 @@ struct rso_config_params {
  * @MBO_OCE_ENABLED_AP: MBO/OCE enabled network
  * @LOST_LINK_RSSI: lost link RSSI
  * @ROAM_BAND: Allowed band for roaming in FW
- * @IS_DISABLE_BTM: disable btm roaming
  */
 enum roam_cfg_param {
 	RSSI_CHANGE_THRESHOLD,
@@ -678,7 +675,6 @@ enum roam_cfg_param {
 	LOST_LINK_RSSI,
 	ROAM_BAND,
 	HI_RSSI_SCAN_RSSI_DELTA,
-	IS_DISABLE_BTM,
 };
 
 /**

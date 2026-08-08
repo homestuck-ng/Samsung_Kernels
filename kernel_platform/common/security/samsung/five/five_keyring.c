@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * FIVE keyring
  *
@@ -204,7 +203,7 @@ int __init five_load_x509_from_mem(const char *data, size_t size)
 		KEY_ALLOC_NOT_IN_QUOTA);
 	if (IS_ERR(key)) {
 		rc = PTR_ERR(key);
-		pr_err("FIVE: Problem loading X.509 certificate (%d): %s\n",
+		pr_err("Problem loading X.509 certificate (%d): %s\n",
 			rc, "built-in");
 	} else {
 		pr_notice("Loaded X.509 cert '%s': %s\n",

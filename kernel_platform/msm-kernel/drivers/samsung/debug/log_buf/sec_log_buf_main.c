@@ -469,6 +469,7 @@ static ssize_t __pull_early_buffer(struct log_buf_drvdata *drvdata, char *buf)
 	dumper->active = true;
 	kmsg_dump_rewind(dumper);
 	while (kmsg_dump_get_line(dumper, true, line, PAGE_SIZE, &len)) {
+		BUG_ON((copied + len) > drvdata->size);
 		memcpy_fromio(&buf[copied], line, len);
 		copied += len;
 	}

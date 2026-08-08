@@ -30,7 +30,6 @@
 
 #include "linux/power_state.h"
 
-
 #if IS_ENABLED(CONFIG_ARCH_MONACO)
 #define DS_ENTRY_SMC_ID		0xC3000924
 #else
@@ -48,7 +47,6 @@
 #define DS_NUM_PARAMETERS	1
 #define DS_ENTRY		1
 #define DS_EXIT			0
-
 
 #define POWER_STATS_BASEMINOR		0
 #define POWER_STATS_MAX_MINOR		1
@@ -238,7 +236,6 @@ static int send_deep_sleep_vote(int state, struct power_state_drvdata *drv)
 	return msm_rpm_send_message(MSM_RPM_CTX_SLEEP_SET, RPM_XO_DS_REQ,
 				    RPM_XO_DS_ID, &drv->kvp_req, 1);
 }
-
 #elif IS_ENABLED(CONFIG_NOTIFY_AOP)
 static int send_deep_sleep_vote(int state, struct power_state_drvdata *drv)
 {
@@ -307,15 +304,12 @@ static long ps_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case POWER_STATE_MODEM_EXIT:
 	case ADSP_SUSPEND:
 	case ADSP_EXIT:
-	case CDSP_EXIT:
-	case CDSP_SUSPEND:
 	case POWER_STATE_ADSP_SUSPEND:
 	case POWER_STATE_ADSP_EXIT:
 		pr_debug("Deprecated ioctl\n");
 		break;
 
 	default:
-		pr_err("Inside default in power_state.c due to %d\n", cmd);
 		ret = -ENOIOCTLCMD;
 		pr_err("%s: Default\n", __func__);
 		break;
@@ -479,7 +473,7 @@ static ssize_t suspend_delay_store(struct kobject *kobj, struct kobj_attribute *
 		return ret;
 	}
 
-	drv->suspend_delay = val;
+	drv->deep_sleep_allowed = val;
 
 	return count;
 }

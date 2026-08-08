@@ -101,7 +101,7 @@
 			enable-method = "psci";
 			next-level-cache = <&L2_2>;
 			capacity-dmips-mhz = <1075>;
-			dynamic-power-coefficient = <85>;
+			dynamic-power-coefficient = <109>;
 			#cooling-cells = <2>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
 			L2_2: l2-cache {
@@ -121,7 +121,7 @@
 			enable-method = "psci";
 			next-level-cache = <&L2_3>;
 			capacity-dmips-mhz = <1075>;
-			dynamic-power-coefficient = <85>;
+			dynamic-power-coefficient = <109>;
 			#cooling-cells = <2>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
 			L2_3: l2-cache {
@@ -142,7 +142,7 @@
 			enable-method = "psci";
 			next-level-cache = <&L2_4>;
 			capacity-dmips-mhz = <1075>;
-			dynamic-power-coefficient = <85>;
+			dynamic-power-coefficient = <109>;
 			#cooling-cells = <2>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
 			L2_4: l2-cache {
@@ -162,7 +162,7 @@
 			enable-method = "psci";
 			next-level-cache = <&L2_5>;
 			capacity-dmips-mhz = <1075>;
-			dynamic-power-coefficient = <85>;
+			dynamic-power-coefficient = <109>;
 			#cooling-cells = <2>;
 			qcom,freq-domain = <&cpufreq_hw 1 4>;
 			L2_5: l2-cache {
@@ -2140,12 +2140,8 @@
 	qcom,chd {
 		compatible = "qcom,core-hang-detect";
 		label = "core";
-		qcom,chd-percpu-info = <&CPU0 0x17800058 0x17800060>,
-					<&CPU1 0x17810058 0x17810060>,
-					<&CPU2 0x17820058 0x17820060>,
-					<&CPU3 0x17830058 0x17830060>,
-					<&CPU4 0x17840058 0x17840060>,
-					<&CPU5 0x17850058 0x17850060>;
+		qcom,threshold-arr = <0x17800058 0x17810058 0x17820058 0x17830058 0x17840058 0x17850058>;
+		qcom,config-arr =<0x17800060 0x17810060 0x17820060 0x17830060 0x17840060 0x17850060>;
 	};
 
 	qcom,msm-rtb {

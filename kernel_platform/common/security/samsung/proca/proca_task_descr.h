@@ -1,4 +1,3 @@
-/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * PROCA task descriptor interface
  *
@@ -30,8 +29,6 @@ struct proca_task_descr {
 	struct hlist_node pid_map_node;
 	struct hlist_node app_name_map_node;
 };
-
-void proca_task_descr_debugfs_init(void);
 
 struct proca_task_descr *create_proca_task_descr(struct task_struct *task,
 						 struct proca_identity *ident);

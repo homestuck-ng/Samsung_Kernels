@@ -1262,8 +1262,6 @@ enum qdisc_filter_status {
  * @gpio_tsf_sync_work: work to sync send TSF CAP WMI command
  * @cache_sta_count: number of currently cached stations
  * @acs_complete_event: acs complete event
- * @mc_addr_list: multicast address list
- * @mc_list_lock: spin lock for multicast list
  * @latency_level: 0 - normal, 1 - xr, 2 - low, 3 - ultralow
  * @multi_client_ll_support: to check multi client ll support in driver
  * @client_info: To store multi client id information
@@ -1289,7 +1287,6 @@ enum qdisc_filter_status {
  *			the driver can be avoided/skipped.
  * @mon_adapter: hdd_adapter of monitor mode.
  * @set_mac_addr_req_ctx: Set MAC address command request context
- * @keep_alive_interval: user configured STA keep alive interval
  */
 struct hdd_adapter {
 	/* Magic cookie for adapter sanity verification.  Note that this
@@ -1457,7 +1454,6 @@ struct hdd_adapter {
 #endif
 
 	struct hdd_multicast_addr_list mc_addr_list;
-	qdf_spinlock_t mc_list_lock;
 	uint8_t addr_filter_pattern;
 
 	struct hdd_scan_info scan_info;
@@ -1629,7 +1625,6 @@ struct hdd_adapter {
 #ifdef WLAN_FEATURE_DYNAMIC_MAC_ADDR_UPDATE
 	void *set_mac_addr_req_ctx;
 #endif
-	uint16_t keep_alive_interval;
 };
 
 #define WLAN_HDD_GET_STATION_CTX_PTR(adapter) (&(adapter)->session.station)
@@ -2631,7 +2626,7 @@ QDF_STATUS hdd_add_adapter_front(struct hdd_context *hdd_ctx,
 				 struct hdd_adapter *adapter);
 
 /**
- * typedef hdd_adapter_iterate_cb() – Iteration callback function
+ * typedef hdd_adapter_iterate_cb() ??Iteration callback function
  * @adapter: current adapter of interest
  * @context: user context supplied to the iterator
  *
@@ -2646,7 +2641,7 @@ typedef QDF_STATUS (*hdd_adapter_iterate_cb)(struct hdd_adapter *adapter,
 					     void *context);
 
 /**
- * hdd_adapter_iterate() – Safely iterate over all adapters
+ * hdd_adapter_iterate() ??Safely iterate over all adapters
  * @cb: callback function to invoke for each adapter
  * @context: user-supplied context to pass to @cb
  *
@@ -5348,12 +5343,4 @@ static inline int hdd_set_suspend_mode(struct hdd_context *hdd_ctx)
 	return 0;
 }
 #endif
-/**
- * hdd_update_multicast_list() - update the multicast list
- * @vdev: pointer to VDEV object
- *
- * Return: none
- */
-void hdd_update_multicast_list(struct wlan_objmgr_vdev *vdev);
-
 #endif /* end #if !defined(WLAN_HDD_MAIN_H) */

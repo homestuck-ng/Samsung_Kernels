@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (c) 2018-2021 Samsung Electronics Co., Ltd. All Rights Reserved
  *
@@ -16,7 +15,7 @@
 #include "dsms_rate_limit.h"
 #include "dsms_test.h"
 
-static int is_dsms_initialized_flag;
+static int is_dsms_initialized_flag = false;
 
 int dsms_is_initialized(void)
 {

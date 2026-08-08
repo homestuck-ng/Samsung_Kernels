@@ -1,4 +1,3 @@
-/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * Copyright (c) 2020-2022 Samsung Electronics Co., Ltd. All Rights Reserved
  *
@@ -14,7 +13,6 @@
 #include <linux/fs.h>
 #include <linux/sched.h>
 #include <linux/types.h>
-#include <linux/stat.h>
 #include <linux/string.h>
 
 #include "../../include/defex_internal.h"

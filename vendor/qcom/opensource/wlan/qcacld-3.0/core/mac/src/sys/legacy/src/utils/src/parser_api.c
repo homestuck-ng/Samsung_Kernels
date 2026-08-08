@@ -8527,8 +8527,6 @@ QDF_STATUS populate_dot11f_btm_extended_caps(struct mac_context *mac_ctx,
 {
 	struct s_ext_cap *p_ext_cap;
 	QDF_STATUS  status;
-	bool is_disable_btm;
-	struct cm_roam_values_copy temp;
 
 	pe_debug("enter");
 	dot11f->num_bytes = DOT11F_IE_EXTCAP_MAX_LEN;
@@ -8537,34 +8535,11 @@ QDF_STATUS populate_dot11f_btm_extended_caps(struct mac_context *mac_ctx,
 	status = cm_akm_roam_allowed(mac_ctx->psoc, pe_session->vdev);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		p_ext_cap->bss_transition = 0;
-		pe_debug("vdev:%d, Disable btm for roaming not suppprted",
-			 pe_session->vdev_id);
+		pe_debug("Disable btm for roaming not suppprted");
 	}
 
-	wlan_cm_roam_cfg_get_value(mac_ctx->psoc, pe_session->vdev_id,
-				   IS_DISABLE_BTM, &temp);
-	is_disable_btm = temp.bool_value;
-	if (is_disable_btm) {
-		pe_debug("vdev:%d, Disable BTM as BTM roam disabled by user",
-			 pe_session->vdev_id);
-		p_ext_cap->bss_transition = 0;
-	}
-
-	if (!pe_session->lim_join_req)
-		goto compute_len;
-
-	if (p_ext_cap->bss_transition && !cm_is_open_mode(pe_session->vdev) &&
-	    pe_session->lim_join_req->bssDescription.mbo_oce_enabled_ap &&
-	    !pe_session->limRmfEnabled) {
-		pe_debug("vdev:%d, Disable BTM as MBO AP doesn't support PMF",
-			 pe_session->vdev_id);
-		p_ext_cap->bss_transition = 0;
-	}
-
-compute_len:
 	dot11f->num_bytes = lim_compute_ext_cap_ie_length(dot11f);
 
-	wlan_cm_set_assoc_btm_cap(pe_session->vdev, p_ext_cap->bss_transition);
 	return QDF_STATUS_SUCCESS;
 }
 

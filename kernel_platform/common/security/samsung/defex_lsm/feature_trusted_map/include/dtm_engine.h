@@ -1,4 +1,3 @@
-/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * Copyright (c) 2020-2022 Samsung Electronics Co., Ltd. All Rights Reserved
  *
@@ -12,10 +11,6 @@
 
 #include "dtm.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* Enforces DTM policy for an exec system call */
 extern int dtm_enforce(struct dtm_context *context);
 #ifdef DEFEX_KUNIT_ENABLED
@@ -23,7 +18,4 @@ extern int dtm_enforce(struct dtm_context *context);
 extern void dtm_engine_override_data(const unsigned char *);
 #endif
 
-#ifdef __cplusplus
-}
-#endif
 #endif /* _INCLUDE_DTM_ENGINE_H */

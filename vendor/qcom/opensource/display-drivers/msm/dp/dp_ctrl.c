@@ -571,7 +571,7 @@ static int dp_ctrl_link_train(struct dp_ctrl_private *ctrl)
 	struct drm_dp_link link_info = {0};
 
 #if defined(CONFIG_SECDP)
-	if (!secdp_get_cable_status() || !secdp_get_hpd_status()) {
+	if (!secdp_get_cable_status()) {
 		DP_INFO("cable is out\n");
 		return -EIO;
 	}
@@ -636,7 +636,7 @@ static int dp_ctrl_link_train(struct dp_ctrl_private *ctrl)
 
 end:
 #if defined(CONFIG_SECDP)
-	if (!secdp_get_cable_status() || !secdp_get_hpd_status()) {
+	if (!secdp_get_cable_status()) {
 		DP_INFO("cable is out <2>\n");
 		return -EIO;
 	}
@@ -808,7 +808,7 @@ static int dp_ctrl_link_setup(struct dp_ctrl_private *ctrl, bool shallow)
 
 	while (1) {
 #if defined(CONFIG_SECDP)
-		if (!secdp_get_cable_status() || !secdp_get_hpd_status()) {
+		if (!secdp_get_cable_status()) {
 			DP_INFO("cable is out\n");
 			rc = -EIO;
 			break;
@@ -855,7 +855,7 @@ static int dp_ctrl_link_setup(struct dp_ctrl_private *ctrl, bool shallow)
 
 #if defined(CONFIG_SECDP) && !defined(SECDP_AUDIO_CTS)
 		if ((ctrl->link->link_params.bw_code == DP_LINK_BW_1_62 && downgrade) ||
-			!secdp_get_cable_status() || !secdp_get_hpd_status()) {
+			!secdp_get_cable_status()) {
 			rc = -EIO;
 			break;
 		}
@@ -1498,8 +1498,8 @@ static bool ps176_high_refresh_rate_check(struct dp_panel *dp_panel)
 			max_timing->pixel_clk_khz > 250000) {
 		ret = true;
 	} else if (max_resolution >= RES_2560X1440 &&
-			max_timing->refresh_rate >= 75 &&
-			max_timing->pixel_clk_khz > 290000) {
+			max_timing->refresh_rate > 75 &&
+			max_timing->pixel_clk_khz > 300000) {
 		ret = true;
 	}
 

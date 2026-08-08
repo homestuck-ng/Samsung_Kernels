@@ -7,7 +7,6 @@ struct sec_boot_stat_soc_operations {
 	unsigned long long (*ktime_to_time)(unsigned long long ktime);
 	void (*show_on_boot_stat)(struct seq_file *m);
 	void (*show_on_enh_boot_time)(struct seq_file *m);
-	void (*show_on_enh_boot_stat)(struct seq_file *m);
 };
 
 #if IS_ENABLED(CONFIG_SEC_BOOT_STAT)

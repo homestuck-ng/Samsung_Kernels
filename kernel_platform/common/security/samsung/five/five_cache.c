@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * FIVE cache functions
  *
@@ -22,7 +21,7 @@
 #include "five_porting.h"
 
 enum five_file_integrity five_get_cache_status(
-		const struct five_iint_cache *iint)
+		const struct integrity_iint_cache *iint)
 {
 	if (unlikely(!iint))
 		return FIVE_FILE_UNKNOWN;
@@ -33,7 +32,7 @@ enum five_file_integrity five_get_cache_status(
 	return iint->five_status;
 }
 
-void five_set_cache_status(struct five_iint_cache *iint,
+void five_set_cache_status(struct integrity_iint_cache *iint,
 		enum five_file_integrity status)
 {
 	if (unlikely(!iint))

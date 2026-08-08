@@ -242,24 +242,6 @@ static const struct proc_ops rdx_bootdev_pops = {
 	.proc_write = sec_rdx_bootdev_proc_write,
 };
 
-static int __rdx_bootdev_probe_prolog(struct builder *bd)
-{
-	struct rdx_bootdev_drvdata *drvdata =
-		container_of(bd, struct rdx_bootdev_drvdata, bd);
-
-	mutex_init(&drvdata->lock);
-
-	return 0;
-}
-
-static noinline void __rdx_bootdev_remove_epilog(struct builder *bd)
-{
-	struct rdx_bootdev_drvdata *drvdata =
-		container_of(bd, struct rdx_bootdev_drvdata, bd);
-
-	mutex_destroy(&drvdata->lock);
-}
-
 static int __rdx_bootdev_test_sec_debug(struct builder *bd)
 {
 	struct rdx_bootdev_drvdata *drvdata =
@@ -301,7 +283,7 @@ static void __rdx_bootdev_proc_exit(struct builder *bd)
 	proc_remove(drvdata->proc);
 }
 
-static int __rdx_bootdev_probe_epilog(struct builder *bd)
+static int __rdx_boodev_probe_epilog(struct builder *bd)
 {
 	struct rdx_bootdev_drvdata *drvdata =
 			container_of(bd, struct rdx_bootdev_drvdata, bd);
@@ -344,11 +326,10 @@ static int __rdx_bootdev_remove(struct platform_device *pdev,
 
 static const struct dev_builder __rdx_bootdev_dev_builder[] = {
 	DEVICE_BUILDER(__rdx_bootdev_parse_dt, NULL),
-	DEVICE_BUILDER(__rdx_bootdev_probe_prolog, __rdx_bootdev_remove_epilog),
 	DEVICE_BUILDER(__rdx_bootdev_test_sec_debug, NULL),
 	DEVICE_BUILDER(__rdx_bootdev_proc_init,
 		       __rdx_bootdev_proc_exit),
-	DEVICE_BUILDER(__rdx_bootdev_probe_epilog, NULL),
+	DEVICE_BUILDER(__rdx_boodev_probe_epilog, NULL),
 };
 
 static int sec_qc_rdx_bootdev_probe(struct platform_device *pdev)

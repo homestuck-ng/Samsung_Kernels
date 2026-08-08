@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * FIVE dmverity functions
  *
@@ -22,7 +21,6 @@
 #include "five.h"
 #include "five_testing.h"
 #include "five_porting.h"
-
 #include "drivers/md/dm.h"
 
 #ifdef CONFIG_FIVE_DEBUG
@@ -83,16 +81,16 @@ void call_dm_put(struct mapped_device *md)
 }
 
 __visible_for_testing __mockable
-struct BDEV_TYPE *call_blkdev_get_by_dev(
+struct block_device *call_blkdev_get_by_dev(
 		dev_t dev, fmode_t mode, void *holder)
 {
-	return do_blkdev_get_by_dev(dev, mode, holder);
+	return blkdev_get_by_dev(dev, mode, holder);
 }
 
 __visible_for_testing __mockable
-void call_blkdev_put(struct BDEV_TYPE *bdev, fmode_t mode)
+void call_blkdev_put(struct block_device *bdev, fmode_t mode)
 {
-	do_blkdev_put(bdev, mode);
+	blkdev_put(bdev, mode);
 	return;
 }
 
@@ -228,7 +226,7 @@ enum five_dmverity_codes is_dmverity_loop(
 	enum five_dmverity_codes result = FIVE_DMV_NO_SB_LOOP_DEVICE;
 	struct super_block *i_sb;
 	const struct inode *inode;
-	struct BDEV_TYPE *bdev;
+	struct block_device *bdev;
 	struct gendisk *bd_disk;
 	struct file *file_mount_to_lo_dev;
 	struct loop_device *lo_dev;
@@ -240,13 +238,12 @@ enum five_dmverity_codes is_dmverity_loop(
 		goto exit;
 
 	bdev = call_blkdev_get_by_dev(i_sb->s_dev, mode_bdev, NULL);
-
-	if (IS_ERR_OR_NULL(bdev) || MAJOR(GET_BDEV(bdev)->bd_dev) != LOOP_MAJOR) {
+	if (IS_ERR_OR_NULL(bdev) || MAJOR(bdev->bd_dev) != LOOP_MAJOR) {
 		result = FIVE_DMV_NO_BD_LOOP_DEVICE;
 		goto exit;
 	}
 
-	bd_disk = GET_BDEV(bdev)->bd_disk;
+	bd_disk = bdev->bd_disk;
 	if (unlikely(!bd_disk)) {
 		result = FIVE_DMV_NO_BD_DISK;
 		goto exit_free_blkdev;

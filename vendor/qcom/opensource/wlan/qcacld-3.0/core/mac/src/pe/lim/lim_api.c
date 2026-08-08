@@ -1967,8 +1967,7 @@ lim_roam_gen_mbssid_beacon(struct mac_context *mac,
 	}
 
 	if (!nontx_bcn_prbrsp_len) {
-		pe_debug("failed to generate/find MBSSID beacon, list_count:%d",
-			 list_count);
+		pe_debug("failed to generate/find MBSSID beacon");
 		goto error;
 	}
 

@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * PROCA vfs functions
  *
@@ -134,7 +133,7 @@ const char *proca_d_path(struct file *file, char **pathbuf, char *namebuf)
 	}
 
 	if (!pathname) {
-		strscpy(namebuf, path->dentry->d_name.name, NAME_MAX);
+		strlcpy(namebuf, path->dentry->d_name.name, NAME_MAX);
 		pathname = namebuf;
 	}
 

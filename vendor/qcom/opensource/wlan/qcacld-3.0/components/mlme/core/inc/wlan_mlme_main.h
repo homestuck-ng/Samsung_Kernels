@@ -342,7 +342,6 @@ struct ft_context {
  * @cckm_ie_len: cckm_ie len
  * @ese_tspec_info: ese tspec info
  * @ext_cap_ie: Ext CAP IE
- * @assoc_btm_cap: BSS transition management cap used in (re)assoc req
  */
 struct mlme_connect_info {
 	uint8_t timing_meas_cap;
@@ -367,7 +366,6 @@ struct mlme_connect_info {
 #endif
 #endif
 	uint8_t ext_cap_ie[DOT11F_IE_EXTCAP_MAX_LEN + 2];
-	bool assoc_btm_cap;
 };
 
 /** struct wait_for_key_timer - wait for key timer object
@@ -433,7 +431,6 @@ struct mlme_ap_config {
  * @is_usr_ps_enabled: Is Power save enabled
  * @notify_co_located_ap_upt_rnr: Notify co located AP to update RNR or not
  * @mlme_ap: SAP related vdev private configurations
- * @keep_alive_period: KEEPALIVE period in seconds
  */
 struct mlme_legacy_priv {
 	bool chan_switch_in_progress;
@@ -479,7 +476,6 @@ struct mlme_legacy_priv {
 	bool is_usr_ps_enabled;
 	bool notify_co_located_ap_upt_rnr;
 	struct mlme_ap_config mlme_ap;
-	uint16_t keep_alive_period;
 };
 
 /**

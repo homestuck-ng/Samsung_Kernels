@@ -3800,8 +3800,7 @@ static void cam_smmu_release_cb(struct platform_device *pdev)
 	for (i = 0; i < iommu_cb_set.cb_num; i++)
 		cam_smmu_deinit_cb(&iommu_cb_set.cb_info[i]);
 
-	kvfree(iommu_cb_set.cb_info);
-	iommu_cb_set.cb_info = NULL;
+	devm_kfree(&pdev->dev, iommu_cb_set.cb_info);
 	iommu_cb_set.cb_num = 0;
 }
 
@@ -3926,8 +3925,9 @@ static int cam_alloc_smmu_context_banks(struct device *dev)
 	}
 
 	/* allocate memory for the context banks */
-	iommu_cb_set.cb_info = kvzalloc(
-		iommu_cb_set.cb_num * sizeof(struct cam_context_bank_info), GFP_KERNEL);
+	iommu_cb_set.cb_info = devm_kzalloc(dev,
+		iommu_cb_set.cb_num * sizeof(struct cam_context_bank_info),
+		GFP_KERNEL);
 
 	if (!iommu_cb_set.cb_info) {
 		CAM_ERR(CAM_SMMU, "Error: cannot allocate context banks");

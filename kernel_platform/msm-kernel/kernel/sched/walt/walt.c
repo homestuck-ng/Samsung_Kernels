@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022-2024, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/syscore_ops.h>
@@ -2366,7 +2365,6 @@ static struct walt_sched_cluster *alloc_new_cluster(const struct cpumask *cpus)
 	cluster->cur_freq		=	1;
 	cluster->max_freq		=	1;
 	cluster->max_possible_freq	=	1;
-	cluster->sibling_cluster	=	-1;
 
 	raw_spin_lock_init(&cluster->load_lock);
 	cluster->cpus = *cpus;
@@ -3676,10 +3674,6 @@ static void walt_sched_init_rq(struct rq *rq)
 	wrq->notif_pending = false;
 
 	wrq->num_mvp_tasks = 0;
-
-	wrq->uclamp_limit[UCLAMP_MIN] = 0;
-	wrq->uclamp_limit[UCLAMP_MAX] = SCHED_CAPACITY_SCALE;
-
 	INIT_LIST_HEAD(&wrq->mvp_tasks);
 }
 
@@ -3857,10 +3851,7 @@ static void android_rvh_enqueue_task(void *unused, struct rq *rq, struct task_st
 {
 	u64 wallclock = walt_ktime_get_ns();
 	struct walt_task_struct *wts = (struct walt_task_struct *) p->android_vendor_data1;
-	struct walt_rq *wrq = (struct walt_rq *) rq->android_vendor_data1;
 	bool double_enqueue = false;
-	unsigned long min = uclamp_rq_get(rq, UCLAMP_MIN);
-	unsigned long max = uclamp_rq_get(rq, UCLAMP_MAX);
 
 	if (unlikely(walt_disabled))
 		return;
@@ -3893,14 +3884,6 @@ static void android_rvh_enqueue_task(void *unused, struct rq *rq, struct task_st
 
 	if (!double_enqueue)
 		walt_inc_cumulative_runnable_avg(rq, p);
-
-	if ((wrq->uclamp_limit[UCLAMP_MIN] != min) ||
-		(wrq->uclamp_limit[UCLAMP_MAX] != max)) {
-		wrq->uclamp_limit[UCLAMP_MIN] = min;
-		wrq->uclamp_limit[UCLAMP_MAX] = max;
-		waltgov_run_callback(rq, WALT_CPUFREQ_UCLAMP);
-	}
-
 	trace_sched_enq_deq_task(p, 1, cpumask_bits(&p->cpus_mask)[0], is_mvp(wts));
 }
 
@@ -3909,8 +3892,6 @@ static void android_rvh_dequeue_task(void *unused, struct rq *rq, struct task_st
 	struct walt_rq *wrq = (struct walt_rq *) rq->android_vendor_data1;
 	struct walt_task_struct *wts = (struct walt_task_struct *) p->android_vendor_data1;
 	bool double_dequeue = false;
-	unsigned long min = uclamp_rq_get(rq, UCLAMP_MIN);
-	unsigned long max = uclamp_rq_get(rq, UCLAMP_MAX);
 
 	if (unlikely(walt_disabled))
 		return;
@@ -3950,13 +3931,6 @@ static void android_rvh_dequeue_task(void *unused, struct rq *rq, struct task_st
 
 	if (!double_dequeue)
 		walt_dec_cumulative_runnable_avg(rq, p);
-
-	if ((wrq->uclamp_limit[UCLAMP_MIN] != min) ||
-	    (wrq->uclamp_limit[UCLAMP_MAX] != max)) {
-		wrq->uclamp_limit[UCLAMP_MIN] = min;
-		wrq->uclamp_limit[UCLAMP_MAX] = max;
-		waltgov_run_callback(rq, WALT_CPUFREQ_UCLAMP);
-	}
 
 	trace_sched_enq_deq_task(p, 0, cpumask_bits(&p->cpus_mask)[0], is_mvp(wts));
 }

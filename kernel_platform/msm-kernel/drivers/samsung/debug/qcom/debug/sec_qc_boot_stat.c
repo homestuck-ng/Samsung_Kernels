@@ -111,32 +111,12 @@ static void sec_qc_boot_stat_show_on_boot_stat(struct seq_file *m)
 {
 	seq_printf(m, "%-46s:%11u%13u%13u\n", "Bootloader start",
 			__boot_stat_counter_to_msec(bootloader_start), 0, 0);
+	seq_printf(m, "%-46s:%11u%13u%13u\n", "Bootloader end",
+			__boot_stat_counter_to_msec(bootloader_end), 0, 0);
 	seq_printf(m, "%-46s:%11u%13u%13u\n", "Bootloader display",
 			__boot_stat_counter_to_msec(bootloader_display), 0, 0);
 	seq_printf(m, "%-46s:%11u%13u%13u\n", "Bootloader load kernel",
 			__boot_stat_counter_to_msec(bootloader_load_kernel), 0, 0);
-	seq_printf(m, "%-46s:%11u%13u%13u\n", "Bootloader end",
-			__boot_stat_counter_to_msec(bootloader_end), 0, 0);			
-}
-
-static void sec_qc_enhanced_boot_stat_show_on_boot_stat(struct seq_file *m)
-{
-	seq_printf(m, "%-90s%7u%7u%7u\n", "!@Boot_EBS_B: Bootloader start",
-		   __boot_stat_counter_to_msec(bootloader_start), 0,
-		   __boot_stat_counter_to_msec(bootloader_start));
-	seq_printf(m, "%-90s%7u%7u%7u\n", "!@Boot_EBS_B: Bootloader display",
-		   __boot_stat_counter_to_msec(bootloader_display), 0,
-		   __boot_stat_counter_to_msec(bootloader_display -
-					       bootloader_start));
-	seq_printf(m, "%-90s%7u%7u%7u\n",
-		   "!@Boot_EBS_B: Bootloader load kernel",
-		   __boot_stat_counter_to_msec(bootloader_load_kernel), 0,
-		   __boot_stat_counter_to_msec(bootloader_load_kernel -
-					       bootloader_display));
-	seq_printf(m, "%-90s%7u%7u%7u\n", "!@Boot_EBS_B: Bootloader end",
-		   __boot_stat_counter_to_msec(bootloader_end), 0,
-		   __boot_stat_counter_to_msec(bootloader_end -
-					       bootloader_load_kernel));
 }
 
 int sec_qc_boot_stat_init(struct builder *bd)
@@ -163,8 +143,6 @@ int sec_qc_boot_stat_init(struct builder *bd)
 
 	boot_stat_ops->ktime_to_time = sec_qc_boot_stat_ktime_to_time;
 	boot_stat_ops->show_on_boot_stat = sec_qc_boot_stat_show_on_boot_stat;
-	boot_stat_ops->show_on_enh_boot_stat =
-		sec_qc_enhanced_boot_stat_show_on_boot_stat;
 
 	err = sec_boot_stat_register_soc_ops(boot_stat_ops);
 	if (err == -EBUSY)

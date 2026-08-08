@@ -1,35 +1,12 @@
-// SPDX-License-Identifier: GPL-2.0
-/*
- * Audit calls for PROCA audit subsystem
- *
- * Copyright (C) 2023 Samsung Electronics, Inc.
- * Oleksandr Stanislavskyi, <o.stanislavs@samsung.com>
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- */
-
 #include <linux/fs.h>
 #include <linux/slab.h>
 #include <linux/gfp.h>
 #include <linux/audit.h>
-
-#if defined(CONFIG_PROCA_GKI_20)
-#include "gki/task_integrity.h"
-#else
 #include <linux/task_integrity.h>
-#endif
-
 #include <linux/version.h>
+#include <linux/iversion.h>
 
 #include "proca_log.h"
-#include "proca_porting.h"
 #include "proca_vfs.h"
 
 static void proca_audit_msg(struct task_struct *task, struct file *file,

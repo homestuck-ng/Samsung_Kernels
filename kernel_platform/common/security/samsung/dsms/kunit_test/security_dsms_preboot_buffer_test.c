@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (c) 2021 Samsung Electronics Co., Ltd. All Rights Reserved
  *
@@ -50,7 +49,7 @@ static void security_dsms_create_message_success_test(struct kunit *test)
 	if (message != NULL) {
 		KUNIT_EXPECT_STREQ(test, message->feature_code, "KATC");
 		KUNIT_EXPECT_STREQ(test, message->detail, "kunit test");
-		KUNIT_EXPECT_EQ(test, message->value, 0LL);
+		KUNIT_EXPECT_EQ(test, message->value, (long long)0);
 		destroy_message(message);
 	}
 }
@@ -131,7 +130,7 @@ static void security_dsms_create_node_success_test(struct kunit *test)
 			KUNIT_EXPECT_PTR_EQ(test, node->message, message);
 			KUNIT_EXPECT_STREQ(test, node->message->feature_code, "KATC");
 			KUNIT_EXPECT_STREQ(test, node->message->detail, "kunit test");
-			KUNIT_EXPECT_EQ(test, node->message->value, 0LL);
+			KUNIT_EXPECT_EQ(test, node->message->value, (long long)0);
 			destroy_node(node);
 		}
 		destroy_message(message);
@@ -248,5 +247,3 @@ static struct kunit_suite security_dsms_preboot_buffer_module = {
 	.test_cases = security_dsms_preboot_buffer_test_cases,
 };
 kunit_test_suites(&security_dsms_preboot_buffer_module);
-
-MODULE_LICENSE("GPL v2");

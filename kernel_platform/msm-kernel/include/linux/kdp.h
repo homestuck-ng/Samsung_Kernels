@@ -4,7 +4,6 @@
 #ifndef __ASSEMBLY__
 #include <linux/mm_types.h>
 #include <linux/stddef.h>
-#include <linux/dcache.h>
 #include <linux/uh.h>
 
 #define __kdp_ro __section(".kdp_ro")

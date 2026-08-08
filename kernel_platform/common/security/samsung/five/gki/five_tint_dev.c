@@ -24,7 +24,6 @@
 #include <linux/slab.h>
 #include <asm/uaccess.h>
 #include <linux/file.h>
-#include <linux/compat.h>
 
 #include "task_integrity.h"
 #include "five_tint_dev.h"
@@ -222,12 +221,6 @@ static long tint_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			break;
 		}
 
-		if (!TASK_INTEGRITY(task)) {
-			ret = -ENOENT;
-			put_tint_and_task(task);
-			break;
-		}
-
 		spin_lock(&TASK_INTEGRITY(task)->value_lock);
 		label = TASK_INTEGRITY(task)->label;
 		spin_unlock(&TASK_INTEGRITY(task)->value_lock);
@@ -267,12 +260,6 @@ static long tint_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		task = get_tint_and_task(msg.param);
 		if (!task) {
 			ret = -ESRCH;
-			break;
-		}
-
-		if (!TASK_INTEGRITY(task)) {
-			ret = -ENOENT;
-			put_tint_and_task(task);
 			break;
 		}
 
@@ -386,11 +373,7 @@ int __init five_tint_init_dev(void)
 		return rc;
 	}
 
-#if (KERNEL_VERSION(6, 3, 0) <= LINUX_VERSION_CODE)
-	dev_ctrl.driver_class = class_create(TINT_DEV);
-#else
 	dev_ctrl.driver_class = class_create(THIS_MODULE, TINT_DEV);
-#endif
 	if (IS_ERR(dev_ctrl.driver_class)) {
 		rc = PTR_ERR(dev_ctrl.driver_class);
 		pr_err("FIVE: class_create failed %d\n", rc);

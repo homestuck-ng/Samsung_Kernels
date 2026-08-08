@@ -381,7 +381,7 @@ static int __qc_upldc_ioremap_qcom_upload_cause(struct builder *bd)
 			qcom_upload_cause,
 			(unsigned long long)virt_to_phys(qcom_upload_cause));
 
-	__qc_upldc_write_cause(UPLOAD_CAUSE_INIT);
+	sec_qc_upldc_write_cause(UPLOAD_CAUSE_INIT);
 
 	return 0;
 }

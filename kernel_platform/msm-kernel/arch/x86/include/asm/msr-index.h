@@ -30,7 +30,6 @@
 #define _EFER_SVME		12 /* Enable virtualization */
 #define _EFER_LMSLE		13 /* Long Mode Segment Limit Enable */
 #define _EFER_FFXSR		14 /* Enable Fast FXSAVE/FXRSTOR */
-#define _EFER_AUTOIBRS		21 /* Enable Automatic IBRS */
 
 #define EFER_SCE		(1<<_EFER_SCE)
 #define EFER_LME		(1<<_EFER_LME)
@@ -39,7 +38,6 @@
 #define EFER_SVME		(1<<_EFER_SVME)
 #define EFER_LMSLE		(1<<_EFER_LMSLE)
 #define EFER_FFXSR		(1<<_EFER_FFXSR)
-#define EFER_AUTOIBRS		(1<<_EFER_AUTOIBRS)
 
 /* Intel MSRs. Some also available on other CPUs */
 
@@ -167,14 +165,6 @@
 #define ARCH_CAP_GDS_NO			BIT(26)	/*
 						 * CPU is not vulnerable to Gather
 						 * Data Sampling (GDS).
-						 */
-#define ARCH_CAP_RFDS_NO		BIT(27)	/*
-						 * Not susceptible to Register
-						 * File Data Sampling.
-						 */
-#define ARCH_CAP_RFDS_CLEAR		BIT(28)	/*
-						 * VERW clears CPU Register
-						 * File.
 						 */
 
 #define MSR_IA32_FLUSH_CMD		0x0000010b
@@ -326,8 +316,7 @@
 #define MSR_IA32_PASID_VALID		BIT_ULL(31)
 
 /* DEBUGCTLMSR bits (others vary by model): */
-#define DEBUGCTLMSR_LBR_BIT		0	     /* last branch recording */
-#define DEBUGCTLMSR_LBR			(1UL <<  DEBUGCTLMSR_LBR_BIT)
+#define DEBUGCTLMSR_LBR			(1UL <<  0) /* last branch recording */
 #define DEBUGCTLMSR_BTF_SHIFT		1
 #define DEBUGCTLMSR_BTF			(1UL <<  1) /* single-step on branches */
 #define DEBUGCTLMSR_TR			(1UL <<  6)

@@ -32,19 +32,17 @@ struct ese_hal_s {
 int ese_hal_send(void *ctx, unsigned char *buf, unsigned int size)
 {
 	struct ese_hal_s *hal = (struct ese_hal_s *)ctx;
-	int32_t ret = 0;
 
 	if (hal == NULL || hal->client == NULL || hal->send == NULL
 			|| buf == NULL || size == 0) {
-		pr_err("%s: invalid arg!\n", __func__);
-		return -EINVAL;
+		return -1;
 	}
 #ifdef ENABLE_HAL_LOG
 	print_hex_dump(KERN_DEBUG, "[star-hal] send : ", DUMP_PREFIX_NONE, 16, 1, buf, size, 0);
 #endif
-	ret = hal->send(hal->client, buf, size);
-	if (ret < 0)
-		return ret;
+	if (hal->send(hal->client, buf, size) < 0) {
+		return -1;
+	}
 
 	return (int)size;
 }
@@ -52,18 +50,15 @@ int ese_hal_send(void *ctx, unsigned char *buf, unsigned int size)
 int ese_hal_receive(void *ctx, unsigned char *buf, unsigned int size)
 {
 	struct ese_hal_s *hal = (struct ese_hal_s *)ctx;
-	int32_t ret = 0;
 
 	if (hal == NULL || hal->client == NULL || hal->receive == NULL
 			|| buf == NULL || size == 0) {
-		pr_err("%s: invalid arg!\n", __func__);
-		return -EINVAL;
+		return -1;
 	}
 
-	ret = hal->receive(hal->client, buf, size);
-	if (ret < 0)
-		return ret;
-
+	if (hal->receive(hal->client, buf, size) < 0) {
+		return -1;
+	}
 #ifdef ENABLE_HAL_LOG
 	print_hex_dump(KERN_DEBUG, "[star-hal] recv : ", DUMP_PREFIX_NONE, 16, 1, buf, size, 0);
 #endif

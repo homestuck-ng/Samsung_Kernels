@@ -519,13 +519,4 @@ cm_roam_beacon_loss_disconnect_event(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_E_NOSUPPORT;
 }
 #endif /* FEATURE_CONNECTIVITY_LOGGING */
-
-/**
- * cm_is_mbo_ap_without_pmf() - Check if the connected AP is MBO without PMF
- * @psoc: PSOC pointer
- * @vdev_id: vdev id
- *
- * Return: True if connected AP is MBO capable without PMF
- */
-bool cm_is_mbo_ap_without_pmf(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id);
 #endif /* _WLAN_CM_ROAM_OFFLOAD_H_ */

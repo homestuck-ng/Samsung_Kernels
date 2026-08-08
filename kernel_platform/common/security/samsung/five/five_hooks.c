@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * Five Event interface
  *
@@ -81,15 +80,13 @@ void five_hook_file_skipped(struct task_struct *task, struct file *file)
 }
 
 void five_hook_task_forked(struct task_struct *parent,
-				struct task_struct *child,
-				enum task_integrity_value parent_tint_value,
-				enum task_integrity_value child_tint_value)
+				struct task_struct *child)
 {
 	call_void_hook(task_forked,
 		parent,
-		parent_tint_value,
+		task_integrity_read(TASK_INTEGRITY(parent)),
 		child,
-		child_tint_value);
+		task_integrity_read(TASK_INTEGRITY(child)));
 }
 
 __mockable

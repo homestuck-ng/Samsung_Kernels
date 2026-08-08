@@ -57,7 +57,6 @@
 #include <linux/delayacct.h>
 #include <linux/init.h>
 #include <linux/pfn_t.h>
-#include <linux/pgsize_migration.h>
 #include <linux/writeback.h>
 #include <linux/memcontrol.h>
 #include <linux/mmu_notifier.h>
@@ -77,9 +76,6 @@
 #include <trace/hooks/mm.h>
 
 #include <trace/events/kmem.h>
-
-#undef CREATE_TRACE_POINTS
-#include <trace/hooks/mm.h>
 
 #include <asm/io.h>
 #include <asm/mmu_context.h>
@@ -702,7 +698,6 @@ check_pfn:
 out:
 	return pfn_to_page(pfn);
 }
-EXPORT_SYMBOL_GPL(_vm_normal_page);
 
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 struct page *vm_normal_page_pmd(struct vm_area_struct *vma, unsigned long addr,
@@ -2350,13 +2345,26 @@ static inline int remap_p4d_range(struct mm_struct *mm, pgd_t *pgd,
 	return 0;
 }
 
-static int remap_pfn_range_internal(struct vm_area_struct *vma, unsigned long addr,
-		unsigned long pfn, unsigned long size, pgprot_t prot)
+/**
+ * remap_pfn_range - remap kernel memory to userspace
+ * @vma: user vma to map to
+ * @addr: target page aligned user address to start at
+ * @pfn: page frame number of kernel physical memory address
+ * @size: size of mapping area
+ * @prot: page protection flags for this mapping
+ *
+ * Note: this is only safe if the mm semaphore is held when called.
+ *
+ * Return: %0 on success, negative error code otherwise.
+ */
+int remap_pfn_range(struct vm_area_struct *vma, unsigned long addr,
+		    unsigned long pfn, unsigned long size, pgprot_t prot)
 {
 	pgd_t *pgd;
 	unsigned long next;
 	unsigned long end = addr + PAGE_ALIGN(size);
 	struct mm_struct *mm = vma->vm_mm;
+	unsigned long remap_pfn = pfn;
 	int err;
 
 	if (WARN_ON_ONCE(!PAGE_ALIGNED(addr)))
@@ -2386,6 +2394,10 @@ static int remap_pfn_range_internal(struct vm_area_struct *vma, unsigned long ad
 		vma->vm_pgoff = pfn;
 	}
 
+	err = track_pfn_remap(vma, &prot, remap_pfn, addr, PAGE_ALIGN(size));
+	if (err)
+		return -EINVAL;
+
 	vma->vm_flags |= VM_IO | VM_PFNMAP | VM_DONTEXPAND | VM_DONTDUMP;
 
 	BUG_ON(addr >= end);
@@ -2397,57 +2409,12 @@ static int remap_pfn_range_internal(struct vm_area_struct *vma, unsigned long ad
 		err = remap_p4d_range(mm, pgd, addr, next,
 				pfn + (addr >> PAGE_SHIFT), prot);
 		if (err)
-			return err;
+			break;
 	} while (pgd++, addr = next, addr != end);
 
-	return 0;
-}
-
-/*
- * Variant of remap_pfn_range that does not call track_pfn_remap.  The caller
- * must have pre-validated the caching bits of the pgprot_t.
- */
-int remap_pfn_range_notrack(struct vm_area_struct *vma, unsigned long addr,
-		unsigned long pfn, unsigned long size, pgprot_t prot)
-{
-	int error = remap_pfn_range_internal(vma, addr, pfn, size, prot);
-
-	if (!error)
-		return 0;
-
-	/*
-	 * A partial pfn range mapping is dangerous: it does not
-	 * maintain page reference counts, and callers may free
-	 * pages due to the error. So zap it early.
-	 */
-	zap_page_range_single(vma, addr, size, NULL);
-	return error;
-}
-
-/**
- * remap_pfn_range - remap kernel memory to userspace
- * @vma: user vma to map to
- * @addr: target page aligned user address to start at
- * @pfn: page frame number of kernel physical memory address
- * @size: size of mapping area
- * @prot: page protection flags for this mapping
- *
- * Note: this is only safe if the mm semaphore is held when called.
- *
- * Return: %0 on success, negative error code otherwise.
- */
-int remap_pfn_range(struct vm_area_struct *vma, unsigned long addr,
-		    unsigned long pfn, unsigned long size, pgprot_t prot)
-{
-	int err;
-
-	err = track_pfn_remap(vma, &prot, pfn, addr, PAGE_ALIGN(size));
 	if (err)
-		return -EINVAL;
+		untrack_pfn(vma, remap_pfn, PAGE_ALIGN(size));
 
-	err = remap_pfn_range_notrack(vma, addr, pfn, size, prot);
-	if (err)
-		untrack_pfn(vma, pfn, PAGE_ALIGN(size));
 	return err;
 }
 EXPORT_SYMBOL(remap_pfn_range);
@@ -3480,7 +3447,6 @@ static vm_fault_t do_wp_page(struct vm_fault *vmf)
 	 * Take out anonymous pages first, anonymous shared vmas are
 	 * not dirty accountable.
 	 */
-	trace_android_vh_do_wp_page(vmf->page);
 	if (PageAnon(vmf->page)) {
 		struct page *page = vmf->page;
 
@@ -3852,7 +3818,6 @@ vm_fault_t do_swap_page(struct vm_fault *vmf)
 	inc_mm_counter_fast(vma->vm_mm, MM_ANONPAGES);
 	dec_mm_counter_fast(vma->vm_mm, MM_SWAPENTS);
 	pte = mk_pte(page, vmf->vma_page_prot);
-	trace_android_vh_do_swap_page(page, &pte, vmf, entry);
 	if ((vmf->flags & FAULT_FLAG_WRITE) && reuse_swap_page(page, NULL)) {
 		pte = maybe_mkwrite(pte_mkdirty(pte), vmf->vma_flags);
 		vmf->flags &= ~FAULT_FLAG_WRITE;
@@ -4009,7 +3974,6 @@ skip_pmd_checks:
 	 */
 	__SetPageUptodate(page);
 
-	trace_android_vh_do_anonymous_page(vma, page);
 	entry = mk_pte(page, vmf->vma_page_prot);
 	entry = pte_sw_mkyoung(entry);
 	if (vmf->vma_flags & VM_WRITE)
@@ -4399,7 +4363,7 @@ static vm_fault_t do_fault_around(struct vm_fault *vmf)
 	end_pgoff = start_pgoff -
 		((address >> PAGE_SHIFT) & (PTRS_PER_PTE - 1)) +
 		PTRS_PER_PTE - 1;
-	end_pgoff = min3(end_pgoff, vma_data_pages(vmf->vma) + vmf->vma->vm_pgoff - 1,
+	end_pgoff = min3(end_pgoff, vma_pages(vmf->vma) + vmf->vma->vm_pgoff - 1,
 			start_pgoff + nr_pages - 1);
 
 	if (!(vmf->flags & FAULT_FLAG_SPECULATIVE) &&
@@ -4417,17 +4381,13 @@ static vm_fault_t do_read_fault(struct vm_fault *vmf)
 {
 	struct vm_area_struct *vma = vmf->vma;
 	vm_fault_t ret = 0;
-	bool should_around = true;
-
-	trace_android_vh_tune_fault_around_bytes(&fault_around_bytes);
 
 	/*
 	 * Let's call ->map_pages() first and use ->fault() as fallback
 	 * if page by the offset is not ready to be mapped (cold cache or
 	 * something).
 	 */
-	trace_android_vh_should_fault_around(vmf, &should_around);
-	if (vma->vm_ops->map_pages && fault_around_bytes >> PAGE_SHIFT > 1 && should_around) {
+	if (vma->vm_ops->map_pages && fault_around_bytes >> PAGE_SHIFT > 1) {
 		if (likely(!userfaultfd_minor(vmf->vma))) {
 			ret = do_fault_around(vmf);
 			if (ret)
@@ -4438,7 +4398,6 @@ static vm_fault_t do_read_fault(struct vm_fault *vmf)
 		record_io_info(vma->vm_file, vmf->pgoff, 1);
 #endif
 	}
-	trace_android_vh_do_read_fault(vmf, fault_around_bytes);
 
 	ret = __do_fault(vmf);
 	if (unlikely(ret & (VM_FAULT_ERROR | VM_FAULT_NOPAGE | VM_FAULT_RETRY)))
@@ -5104,7 +5063,6 @@ static vm_fault_t ___handle_speculative_fault(struct mm_struct *mm,
 
 	vmf.vma_flags = READ_ONCE(vmf.vma->vm_flags);
 	vmf.vma_page_prot = READ_ONCE(vmf.vma->vm_page_prot);
-	vmf.sequence = seq;
 
 #ifdef CONFIG_USERFAULTFD
 	/*
@@ -5114,7 +5072,7 @@ static vm_fault_t ___handle_speculative_fault(struct mm_struct *mm,
 	if (unlikely(vmf.vma_flags & __VM_UFFD_FLAGS)) {
 		uffd_missing_sigbus = vma_is_anonymous(vmf.vma) &&
 					(vmf.vma_flags & VM_UFFD_MISSING) &&
-					userfaultfd_using_sigbus(&vmf);
+					userfaultfd_using_sigbus(vmf.vma);
 		if (!uffd_missing_sigbus) {
 			trace_spf_vma_notsup(_RET_IP_, vmf.vma, address);
 			return VM_FAULT_RETRY;
@@ -5240,6 +5198,7 @@ static vm_fault_t ___handle_speculative_fault(struct mm_struct *mm,
 		vmf.pte = NULL;
 	}
 
+	vmf.sequence = seq;
 	vmf.flags = flags;
 
 	local_irq_enable();
@@ -5606,10 +5565,6 @@ int follow_phys(struct vm_area_struct *vma,
 	if (follow_pte(vma->vm_mm, address, &ptep, &ptl))
 		goto out;
 	pte = *ptep;
-
-	/* Never return PFNs of anon folios in COW mappings. */
-	if (vm_normal_page(vma, address, pte))
-		goto unlock;
 
 	if ((flags & FOLL_WRITE) && !pte_write(pte))
 		goto unlock;

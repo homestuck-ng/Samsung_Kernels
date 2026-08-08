@@ -3796,6 +3796,7 @@ void wma_remove_req(tp_wma_handle wma, uint8_t vdev_id,
  * @shortSlotTimeSupported: short slot time
  * @llbCoexist: llbCoexist
  * @maxTxPower: max tx power
+ * @bss_max_idle_period: BSS max idle period
  *
  * Return: none
  */
@@ -3803,12 +3804,12 @@ static void
 wma_vdev_set_bss_params(tp_wma_handle wma, int vdev_id,
 			tSirMacBeaconInterval beaconInterval,
 			uint8_t dtimPeriod, uint8_t shortSlotTimeSupported,
-			uint8_t llbCoexist, int8_t maxTxPower)
+			uint8_t llbCoexist, int8_t maxTxPower,
+			uint16_t bss_max_idle_period)
 {
 	QDF_STATUS ret;
 	uint32_t slot_time;
 	struct wma_txrx_node *intr = wma->interfaces;
-	uint32_t keep_alive_period;
 
 	/* Beacon Interval setting */
 	ret = wma_vdev_set_param(wma->wmi_handle, vdev_id,
@@ -3861,10 +3862,14 @@ wma_vdev_set_bss_params(tp_wma_handle wma, int vdev_id,
 
 	/* Initialize protection mode in case of coexistence */
 	wma_update_protection_mode(wma, vdev_id, llbCoexist);
-	wlan_mlme_get_sta_keep_alive_period(wma->psoc,
-					    &keep_alive_period);
-	wma_set_sta_keep_alive(wma, vdev_id, SIR_KEEP_ALIVE_NULL_PKT,
-			       keep_alive_period, NULL, NULL, NULL);
+
+	if (bss_max_idle_period)
+		wma_set_sta_keep_alive(
+				wma, vdev_id,
+				SIR_KEEP_ALIVE_NULL_PKT,
+				bss_max_idle_period,
+				NULL, NULL, NULL);
+
 }
 
 static void wma_set_mgmt_frame_protection(tp_wma_handle wma)
@@ -4016,7 +4021,7 @@ QDF_STATUS wma_post_vdev_start_setup(uint8_t vdev_id)
 				mlme_obj->proto.generic.dtim_period,
 				mlme_obj->proto.generic.slot_time,
 				mlme_obj->proto.generic.protection_mode,
-				bss_power);
+				bss_power, 0);
 
 	wma_vdev_set_he_bss_params(wma, vdev_id,
 				   &mlme_obj->proto.he_ops_info);
@@ -4315,7 +4320,8 @@ QDF_STATUS wma_send_peer_assoc_req(struct bss_params *add_bss)
 				add_bss->dtimPeriod,
 				add_bss->shortSlotTimeSupported,
 				add_bss->llbCoexist,
-				add_bss->maxTxPower);
+				add_bss->maxTxPower,
+				add_bss->bss_max_idle_period);
 
 	mlme_obj = wlan_vdev_mlme_get_cmpt_obj(iface->vdev);
 	if (!mlme_obj) {
@@ -4878,7 +4884,8 @@ static void wma_add_sta_req_sta_mode(tp_wma_handle wma, tpAddStaParams params)
 	wma_vdev_set_bss_params(wma, params->smesessionId,
 				iface->beaconInterval, iface->dtimPeriod,
 				iface->shortSlotTimeSupported,
-				iface->llbCoexist, maxTxPower);
+				iface->llbCoexist, maxTxPower,
+				iface->bss_max_idle_period);
 
 	params->csaOffloadEnable = 0;
 	if (wmi_service_enabled(wma->wmi_handle,
@@ -5301,7 +5308,6 @@ void wma_add_sta(tp_wma_handle wma, tpAddStaParams add_sta)
 {
 	uint8_t oper_mode = BSS_OPERATIONAL_MODE_STA;
 	void *htc_handle;
-	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
 	htc_handle = lmac_get_htc_hdl(wma->psoc);
 	if (!htc_handle) {
@@ -5326,7 +5332,7 @@ void wma_add_sta(tp_wma_handle wma, tpAddStaParams add_sta)
 		wma_add_sta_req_ap_mode(wma, add_sta);
 		break;
 	case BSS_OPERATIONAL_MODE_NDI:
-		status = wma_add_sta_ndi_mode(wma, add_sta);
+		wma_add_sta_ndi_mode(wma, add_sta);
 		break;
 	}
 
@@ -5367,8 +5373,7 @@ void wma_add_sta(tp_wma_handle wma, tpAddStaParams add_sta)
 	}
 
 	/* handle wow for nan with 1 or more peer in same way */
-	if (BSS_OPERATIONAL_MODE_NDI == oper_mode &&
-	    QDF_IS_STATUS_SUCCESS(status)) {
+	if (BSS_OPERATIONAL_MODE_NDI == oper_mode) {
 		wma_debug("disable runtime pm and vote for link up");
 		htc_vote_link_up(htc_handle, HTC_LINK_VOTE_NDP_USER_ID);
 		wma_ndp_prevent_runtime_pm(wma);
@@ -5384,7 +5389,6 @@ void wma_delete_sta(tp_wma_handle wma, tpDeleteStaParams del_sta)
 	uint8_t vdev_id = del_sta->smesessionId;
 	bool rsp_requested = del_sta->respReqd;
 	void *htc_handle;
-	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
 	htc_handle = lmac_get_htc_hdl(wma->psoc);
 	if (!htc_handle) {
@@ -5425,7 +5429,7 @@ void wma_delete_sta(tp_wma_handle wma, tpDeleteStaParams del_sta)
 			qdf_mem_free(del_sta);
 		break;
 	case BSS_OPERATIONAL_MODE_NDI:
-		status = wma_delete_sta_req_ndi_mode(wma, del_sta);
+		wma_delete_sta_req_ndi_mode(wma, del_sta);
 		break;
 	default:
 		wma_err("Incorrect oper mode %d", oper_mode);
@@ -5468,8 +5472,7 @@ void wma_delete_sta(tp_wma_handle wma, tpDeleteStaParams del_sta)
 		return;
 	}
 
-	if (BSS_OPERATIONAL_MODE_NDI == oper_mode &&
-	    QDF_IS_STATUS_SUCCESS(status)) {
+	if (BSS_OPERATIONAL_MODE_NDI == oper_mode) {
 		wma_debug("allow runtime pm and vote for link down");
 		htc_vote_link_down(htc_handle, HTC_LINK_VOTE_NDP_USER_ID);
 		wma_ndp_allow_runtime_pm(wma);

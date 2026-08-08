@@ -2300,7 +2300,6 @@ int StreamOutPrimary::Standby() {
 #endif
 #ifdef SEC_AUDIO_CALL_TRANSLATION
         if (adevice->voice_ && adevice->voice_->sec_voice_->call_translation &&
-            !adevice->voice_->IsAnyCallActive() &&
             usecase_ == USECASE_AUDIO_PLAYBACK_VOIP) {
             adevice->voice_->sec_voice_->SetVoiceRxEffectForTranslation(false);
         }
@@ -5459,11 +5458,7 @@ ssize_t StreamInPrimary::read(const void *buffer, size_t bytes) {
     if (!stream_started_) {
         AutoPerfLock perfLock;
 #ifdef SEC_AUDIO_SAMSUNGRECORD
-        if (preprocess_->IsSupportPreprocess(this)
-            || (adevice->voice_ && (adevice->voice_->mode_ == AUDIO_MODE_IN_CALL
-                || adevice->voice_->mode_ == AUDIO_MODE_IN_COMMUNICATION))) {
-            preprocess_->SetParamPreProcessSolutions(this, RECORD_PARAM_ALL);
-        }
+        preprocess_->SetParamPreProcessSolutions(this, RECORD_PARAM_ALL);
 #endif
         ret = pal_stream_start(pal_stream_handle_);
         if (ret) {

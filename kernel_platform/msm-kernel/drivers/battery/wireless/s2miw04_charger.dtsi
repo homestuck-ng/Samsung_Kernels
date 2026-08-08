@@ -75,7 +75,7 @@
 	};
 };
 
-/* /home/dpi/qb5_8814/workspace/P4_1716/android/kernel_platform/kmodule/battery/stable/suwon_2111/wireless/s2miw04/s2miw04_charger.r0q.dtsi */
+/* /home/dpi/qb5_8815/workspace/P4_1716/android/kernel_platform/kmodule/battery/stable/suwon_2111/wireless/s2miw04/s2miw04_charger.r0q.dtsi */
 #include <dt-bindings/battery/sec-battery.h>
 
 &sw_i2c2 {
@@ -141,7 +141,7 @@
 		iec_data {
 			reg_56 = <46>;
 			reg_57 = <30>;
-			reg_5B = <200>;
+			reg_5B = <30>;
 			reg_84 = <90>;
 			reg_85 = <27>;
 			reg_86 = <9>;
@@ -153,9 +153,6 @@
 			reg_800 = <45>;
 			reg_801 = <60>;
 			reg_802 = <130>;
-			reg_803 = <66>;
-			reg_804 = <20>;
-			reg_805 = <7>;
 		};
 	};
 };

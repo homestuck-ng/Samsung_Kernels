@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * Five Event interface
  *
@@ -43,7 +42,6 @@ struct five_hook_heads five_hook_heads = {
 	.integrity_reset2 =
 		LIST_HEAD_INIT(five_hook_heads.integrity_reset2),
 };
-EXPORT_SYMBOL_GPL(five_hook_heads);
 
 void five_hook_file_processed(struct task_struct *task,
 				struct file *file, void *xattr,

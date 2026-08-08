@@ -157,10 +157,3 @@
 	};
 };
 
-&wlan {
-	status = "disabled";
-};
-
-&cnss_wlan_mem {
-	status = "disabled";
-};

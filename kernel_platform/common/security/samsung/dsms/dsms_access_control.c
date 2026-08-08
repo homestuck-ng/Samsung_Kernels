@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (c) 2018 Samsung Electronics Co., Ltd. All Rights Reserved
  *
@@ -61,8 +60,8 @@ int dsms_verify_access(const void *address)
 	char function_name[KSYM_NAME_LEN+1];
 	int index;
 
-	DSMS_LOG_DEBUG("%s: Caller function is %pS", __func__,
-		       address);
+	DSMS_LOG_DEBUG("%s: Caller function is %pS (%pF)", __func__,
+		       address, address);
 
 	if (!address) {
 		DSMS_LOG_ERROR("DENY: invalid caller address.");

@@ -1204,14 +1204,11 @@ static u32 dwc3_calc_trbs_left(struct dwc3_ep *dep)
 	 * pending to be processed by the driver.
 	 */
 	if (dep->trb_enqueue == dep->trb_dequeue) {
-		struct dwc3_request *req;
-
 		/*
-		 * If there is any request remained in the started_list with
-		 * active TRBs at this point, then there is no TRB available.
+		 * If there is any request remained in the started_list at
+		 * this point, that means there is no TRB available.
 		 */
-		req = next_request(&dep->started_list);
-		if (req && req->num_trbs)
+		if (!list_empty(&dep->started_list))
 			return 0;
 
 		return DWC3_TRB_NUM - 1;
@@ -1439,8 +1436,8 @@ static int dwc3_prepare_trbs_sg(struct dwc3_ep *dep,
 	struct scatterlist *s;
 	int		i;
 	unsigned int length = req->request.length;
-	unsigned int remaining = req->num_pending_sgs;
-	unsigned int num_queued_sgs = req->request.num_mapped_sgs - remaining;
+	unsigned int remaining = req->request.num_mapped_sgs
+		- req->num_queued_sgs;
 	unsigned int num_trbs = req->num_trbs;
 	bool needs_extra_trb = dwc3_needs_extra_trb(dep, req);
 
@@ -1448,7 +1445,7 @@ static int dwc3_prepare_trbs_sg(struct dwc3_ep *dep,
 	 * If we resume preparing the request, then get the remaining length of
 	 * the request and resume where we left off.
 	 */
-	for_each_sg(req->request.sg, s, num_queued_sgs, i)
+	for_each_sg(req->request.sg, s, req->num_queued_sgs, i)
 		length -= sg_dma_len(s);
 
 	for_each_sg(sg, s, remaining, i) {
@@ -1708,6 +1705,7 @@ static int __dwc3_gadget_get_frame(struct dwc3 *dwc)
  */
 static int __dwc3_stop_active_transfer(struct dwc3_ep *dep, bool force, bool interrupt)
 {
+	struct dwc3 *dwc = dep->dwc;
 	struct dwc3_gadget_ep_cmd_params params;
 	u32 cmd;
 	int ret;
@@ -1732,7 +1730,8 @@ static int __dwc3_stop_active_transfer(struct dwc3_ep *dep, bool force, bool int
 	dep->resource_index = 0;
 
 	if (!interrupt) {
-		mdelay(1);
+		if (!DWC3_IP_IS(DWC3) || DWC3_VER_IS_PRIOR(DWC3, 310A))
+			mdelay(1);
 		dep->flags &= ~DWC3_EP_TRANSFER_STARTED;
 	} else if (!ret) {
 		dep->flags |= DWC3_EP_END_TRANSFER_PENDING;
@@ -2495,37 +2494,9 @@ static int dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on)
 {
 	u32			reg;
 	u32			timeout = 2000;
-	u32			saved_config = 0;
 
 	if (pm_runtime_suspended(dwc->dev))
 		return 0;
-
-	/*
-	 * When operating in USB 2.0 speeds (HS/FS), ensure that
-	 * GUSB2PHYCFG.ENBLSLPM and GUSB2PHYCFG.SUSPHY are cleared before starting
-	 * or stopping the controller. This resolves timeout issues that occur
-	 * during frequent role switches between host and device modes.
-	 *
-	 * Save and clear these settings, then restore them after completing the
-	 * controller start or stop sequence.
-	 *
-	 * This solution was discovered through experimentation as it is not
-	 * mentioned in the dwc3 programming guide. It has been tested on an
-	 * Exynos platforms.
-	 */
-	reg = dwc3_readl(dwc->regs, DWC3_GUSB2PHYCFG(0));
-	if (reg & DWC3_GUSB2PHYCFG_SUSPHY) {
-		saved_config |= DWC3_GUSB2PHYCFG_SUSPHY;
-		reg &= ~DWC3_GUSB2PHYCFG_SUSPHY;
-	}
-
-	if (reg & DWC3_GUSB2PHYCFG_ENBLSLPM) {
-		saved_config |= DWC3_GUSB2PHYCFG_ENBLSLPM;
-		reg &= ~DWC3_GUSB2PHYCFG_ENBLSLPM;
-	}
-
-	if (saved_config)
-		dwc3_writel(dwc->regs, DWC3_GUSB2PHYCFG(0), reg);
 
 	reg = dwc3_readl(dwc->regs, DWC3_DCTL);
 	if (is_on) {
@@ -2553,12 +2524,6 @@ static int dwc3_gadget_run_stop(struct dwc3 *dwc, int is_on)
 		reg = dwc3_readl(dwc->regs, DWC3_DSTS);
 		reg &= DWC3_DSTS_DEVCTRLHLT;
 	} while (--timeout && !(!is_on ^ !reg));
-
-	if (saved_config) {
-		reg = dwc3_readl(dwc->regs, DWC3_GUSB2PHYCFG(0));
-		reg |= saved_config;
-		dwc3_writel(dwc->regs, DWC3_GUSB2PHYCFG(0), reg);
-	}
 
 	if (!timeout) {
 		dev_err(dwc->dev, "failed to %s controller\n",
@@ -2851,7 +2816,6 @@ static int __dwc3_gadget_start(struct dwc3 *dwc)
 	dwc3_ep0_out_start(dwc);
 
 	dwc3_gadget_enable_irq(dwc);
-	dwc3_enable_susphy(dwc, true);
 
 	return 0;
 
@@ -4097,10 +4061,8 @@ static void dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 		WARN_ONCE(DWC3_VER_IS_PRIOR(DWC3, 240A) && dwc->has_lpm_erratum,
 				"LPM Erratum not available on dwc3 revisions < 2.40a\n");
 
-		if (dwc->has_lpm_erratum && !DWC3_VER_IS_PRIOR(DWC3, 240A)) {
-			reg &= ~DWC3_DCTL_NYET_THRES_MASK;
+		if (dwc->has_lpm_erratum && !DWC3_VER_IS_PRIOR(DWC3, 240A))
 			reg |= DWC3_DCTL_NYET_THRES(dwc->lpm_nyet_threshold);
-		}
 
 		dwc3_gadget_dctl_write_safe(dwc, reg);
 	} else {
@@ -4613,7 +4575,6 @@ void dwc3_gadget_exit(struct dwc3 *dwc)
 	if (!dwc->gadget)
 		return;
 
-	dwc3_enable_susphy(dwc, false);
 	usb_del_gadget(dwc->gadget);
 	dwc3_gadget_free_endpoints(dwc);
 	usb_put_gadget(dwc->gadget);
@@ -4664,4 +4625,15 @@ err1:
 
 err0:
 	return ret;
+}
+
+void dwc3_gadget_process_pending_events(struct dwc3 *dwc)
+{
+	if (dwc->pending_events) {
+		dwc3_interrupt(dwc->irq_gadget, dwc->ev_buf);
+		dwc3_thread_interrupt(dwc->irq_gadget, dwc->ev_buf);
+		pm_runtime_put(dwc->dev);
+		dwc->pending_events = false;
+		enable_irq(dwc->irq_gadget);
+	}
 }

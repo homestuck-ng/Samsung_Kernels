@@ -950,9 +950,6 @@ static inline int rtnl_vfinfo_size(const struct net_device *dev,
 				 /* IFLA_VF_STATS_TX_DROPPED */
 				 nla_total_size_64bit(sizeof(__u64)));
 		}
-		if (dev->netdev_ops->ndo_get_vf_guid)
-			size += num_vfs * 2 *
-				nla_total_size(sizeof(struct ifla_vf_guid));
 		return size;
 	} else
 		return 0;
@@ -2382,7 +2379,7 @@ static int do_setvfinfo(struct net_device *dev, struct nlattr **tb)
 
 		nla_for_each_nested(attr, tb[IFLA_VF_VLAN_LIST], rem) {
 			if (nla_type(attr) != IFLA_VF_VLAN_INFO ||
-			    nla_len(attr) < sizeof(struct ifla_vf_vlan_info)) {
+			    nla_len(attr) < NLA_HDRLEN) {
 				return -EINVAL;
 			}
 			if (len >= MAX_VLAN_LIST_LEN)
@@ -4906,9 +4903,10 @@ static int rtnl_bridge_setlink(struct sk_buff *skb, struct nlmsghdr *nlh,
 	struct net *net = sock_net(skb->sk);
 	struct ifinfomsg *ifm;
 	struct net_device *dev;
-	struct nlattr *br_spec, *attr, *br_flags_attr = NULL;
+	struct nlattr *br_spec, *attr = NULL;
 	int rem, err = -EOPNOTSUPP;
 	u16 flags = 0;
+	bool have_flags = false;
 
 	if (nlmsg_len(nlh) < sizeof(*ifm))
 		return -EINVAL;
@@ -4926,11 +4924,11 @@ static int rtnl_bridge_setlink(struct sk_buff *skb, struct nlmsghdr *nlh,
 	br_spec = nlmsg_find_attr(nlh, sizeof(struct ifinfomsg), IFLA_AF_SPEC);
 	if (br_spec) {
 		nla_for_each_nested(attr, br_spec, rem) {
-			if (nla_type(attr) == IFLA_BRIDGE_FLAGS && !br_flags_attr) {
+			if (nla_type(attr) == IFLA_BRIDGE_FLAGS && !have_flags) {
 				if (nla_len(attr) < sizeof(flags))
 					return -EINVAL;
 
-				br_flags_attr = attr;
+				have_flags = true;
 				flags = nla_get_u16(attr);
 			}
 
@@ -4974,8 +4972,8 @@ static int rtnl_bridge_setlink(struct sk_buff *skb, struct nlmsghdr *nlh,
 		}
 	}
 
-	if (br_flags_attr)
-		memcpy(nla_data(br_flags_attr), &flags, sizeof(flags));
+	if (have_flags)
+		memcpy(nla_data(attr), &flags, sizeof(flags));
 out:
 	return err;
 }

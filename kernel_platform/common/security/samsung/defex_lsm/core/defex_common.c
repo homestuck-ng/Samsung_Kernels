@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (c) 2018 Samsung Electronics Co., Ltd. All Rights Reserved
  *
@@ -30,24 +29,16 @@
 #include "include/defex_internal.h"
 #include "include/defex_rules.h"
 
-#if KERNEL_VER_LESS(5, 11, 0)
-#include <linux/time.h>
-#else
-#include <linux/timekeeping.h>
-#endif
-
-#if KERNEL_VER_GTE(4, 11, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
 #include <linux/sched/mm.h>
 #include <linux/sched/task.h>
 #endif
 
-#if KERNEL_VER_GTE(5, 10, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
 #include "../security/integrity/integrity.h"
 #endif
 
-const char unknown_file[] = "<unknown filename>";
-
-#if KERNEL_VER_LESS(3, 19, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
 
 inline ssize_t __vfs_read(struct file *file, char __user *buf,
 				 size_t count, loff_t *pos)
@@ -67,7 +58,7 @@ inline ssize_t __vfs_read(struct file *file, char __user *buf,
 }
 #endif
 
-#if KERNEL_VER_GTE(5, 1, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 1, 0)
 #define	GET_KERNEL_DS KERNEL_DS
 #else
 #define	GET_KERNEL_DS get_ds()
@@ -76,16 +67,16 @@ inline ssize_t __vfs_read(struct file *file, char __user *buf,
 struct file *local_fopen(const char *fname, int flags, umode_t mode)
 {
 	struct file *f;
-#if KERNEL_VER_LESS(5, 10, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
 	mm_segment_t old_fs;
 #endif
 
-#if KERNEL_VER_LESS(5, 10, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
 	old_fs = get_fs();
 	set_fs(GET_KERNEL_DS);
 #endif
 	f = filp_open(fname, flags, mode);
-#if KERNEL_VER_LESS(5, 10, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
 	set_fs(old_fs);
 #endif
 	return f;
@@ -93,7 +84,7 @@ struct file *local_fopen(const char *fname, int flags, umode_t mode)
 
 int local_fread(struct file *f, loff_t offset, void *ptr, unsigned long bytes)
 {
-#if KERNEL_VER_LESS(5, 10, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
 	mm_segment_t old_fs;
 	char __user *buf = (char __user *)ptr;
 #endif
@@ -102,7 +93,7 @@ int local_fread(struct file *f, loff_t offset, void *ptr, unsigned long bytes)
 	if (!(f->f_mode & FMODE_READ))
 		return -EBADF;
 
-#if KERNEL_VER_LESS(5, 10, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
 	old_fs = get_fs();
 	set_fs(GET_KERNEL_DS);
 	ret = vfs_read(f, buf, bytes, &offset);
@@ -110,44 +101,13 @@ int local_fread(struct file *f, loff_t offset, void *ptr, unsigned long bytes)
 #else
 	ret = (ssize_t)integrity_kernel_read(f, offset, ptr, bytes);
 #endif
-	if (ret >= 0)
-		f->f_pos = offset;
 
 	return (int)ret;
 }
 
-int local_fwrite(struct file *f, loff_t offset, void *ptr, unsigned long bytes)
-{
-#if KERNEL_VER_LESS(5, 10, 0)
-	mm_segment_t old_fs;
-	char __user *buf = (char __user *)ptr;
-#endif
-	ssize_t ret;
+const char unknown_file[] = "<unknown filename>";
 
-#if KERNEL_VER_LESS(5, 10, 0)
-	old_fs = get_fs();
-	set_fs(GET_KERNEL_DS);
-	ret = vfs_write(f, buf, bytes, &offset);
-	set_fs(old_fs);
-#else
-	ret = kernel_write(f, ptr, bytes, &offset);
-#endif
-	if (ret >= 0)
-		f->f_pos = offset;
-
-	return (int)ret;
-}
-
-unsigned long get_current_sec(void)
-{
-#if KERNEL_VER_LESS(5, 11, 0)
-	return get_seconds();
-#else
-	return ktime_get_seconds();
-#endif
-}
-
-bool check_slab_ptr(void *ptr)
+__visible_for_testing bool check_slab_ptr(void *ptr)
 {
 	struct page *page;
 
@@ -157,8 +117,7 @@ bool check_slab_ptr(void *ptr)
 	return PageSlab(page);
 }
 
-int init_defex_context(struct defex_context *dc, int syscall, struct task_struct *p,
-		struct file *f)
+int init_defex_context(struct defex_context *dc, int syscall, struct task_struct *p, struct file *f)
 {
 	memset(dc, 0, offsetof(struct defex_context, cred));
 	if (check_slab_ptr(f)) {
@@ -176,10 +135,8 @@ int init_defex_context(struct defex_context *dc, int syscall, struct task_struct
 
 void release_defex_context(struct defex_context *dc)
 {
-	if (dc->process_name_buff)
-		free_page((unsigned long)dc->process_name_buff);
-	if (dc->target_name_buff)
-		free_page((unsigned long)dc->target_name_buff);
+	kfree(dc->process_name_buff);
+	kfree(dc->target_name_buff);
 	if (dc->target_file)
 		fput(dc->target_file);
 #ifndef DEFEX_CACHES_ENABLE
@@ -222,9 +179,9 @@ char *get_dc_process_name(struct defex_context *dc)
 	if (!dc->process_name) {
 		dpath = get_dc_process_dpath(dc);
 		if (dpath) {
-			dc->process_name_buff = (char *)__get_free_page(GFP_KERNEL);
+			dc->process_name_buff = kmalloc(PATH_MAX, GFP_KERNEL);
 			if (dc->process_name_buff)
-				path = d_path(dpath, dc->process_name_buff, PAGE_SIZE);
+				path = d_path(dpath, dc->process_name_buff, PATH_MAX);
 		}
 		dc->process_name = (IS_ERR_OR_NULL(path)) ? (char *)unknown_file : path;
 	}
@@ -235,12 +192,12 @@ const struct path *get_dc_target_dpath(struct defex_context *dc)
 {
 	const struct path *dpath;
 
-	if (dc->target_dpath && check_slab_ptr((void *)dc->target_dpath))
+	if (dc->target_dpath)
 		return dc->target_dpath;
 
 	if (dc->target_file) {
 		dpath = &(dc->target_file->f_path);
-		if (check_slab_ptr((void *)dpath) && dpath->dentry && dpath->dentry->d_inode) {
+		if (dpath->dentry && dpath->dentry->d_inode) {
 			dc->target_dpath = dpath;
 			return dpath;
 		}
@@ -256,9 +213,9 @@ char *get_dc_target_name(struct defex_context *dc)
 	if (!dc->target_name) {
 		dpath = get_dc_target_dpath(dc);
 		if (dpath) {
-			dc->target_name_buff = (char *)__get_free_page(GFP_KERNEL);
+			dc->target_name_buff = kmalloc(PATH_MAX, GFP_KERNEL);
 			if (dc->target_name_buff)
-				path = d_path(dpath, dc->target_name_buff, PAGE_SIZE);
+				path = d_path(dpath, dc->target_name_buff, PATH_MAX);
 		}
 		dc->target_name = (IS_ERR_OR_NULL(path)) ? (char *)unknown_file : path;
 	}
@@ -272,8 +229,7 @@ struct file *defex_get_source_file(struct task_struct *p)
 
 #ifdef DEFEX_CACHES_ENABLE
 	bool self;
-
-	file_addr = defex_file_cache_find(p->pid, false);
+	file_addr = defex_file_cache_find(p->pid);
 
 	if (!file_addr) {
 		proc_mm = get_task_mm(p);
@@ -290,7 +246,7 @@ struct file *defex_get_source_file(struct task_struct *p)
 		if (!proc_mm)
 			return NULL;
 		if (self)
-#if KERNEL_VER_LESS(5, 8, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 8, 0)
 			if (!down_read_trylock(&proc_mm->mmap_sem))
 				return NULL;
 #else
@@ -306,7 +262,7 @@ struct file *defex_get_source_file(struct task_struct *p)
 		}
 clean_mm:
 		if (self)
-#if KERNEL_VER_LESS(5, 8, 0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 8, 0)
 			up_read(&proc_mm->mmap_sem);
 #else
 			up_read(&proc_mm->mmap_lock);
@@ -343,7 +299,7 @@ char *defex_get_filename(struct task_struct *p)
 	}
 	path_get(dpath);
 
-	buff = (char *)__get_free_page(GFP_KERNEL);
+	buff = kmalloc(PATH_MAX, GFP_KERNEL);
 	if (buff)
 		path = d_path(dpath, buff, PATH_MAX);
 	path_put(dpath);
@@ -360,16 +316,16 @@ out_filename:
 		filename = (char *)unknown_file;
 
 	if (buff)
-		free_page((unsigned long)buff);
+		kfree(buff);
 	return filename;
 }
 
 /* Resolve the filename to absolute path, follow the links
- * name     - input file name
- * out_buff - output pointer to the allocated buffer (should be freed)
- * Returns:   pointer to resolved filename or NULL
+   name     - input file name
+   out_buff - output pointer to the allocated buffer (should be freed)
+   Returns:   pointer to resolved filename or NULL
  */
-char *defex_resolve_filename(const char *name, char **out_buff)
+char* defex_resolve_filename(const char *name, char **out_buff)
 {
 	char *target_file = NULL, *buff = NULL;
 	struct path path;

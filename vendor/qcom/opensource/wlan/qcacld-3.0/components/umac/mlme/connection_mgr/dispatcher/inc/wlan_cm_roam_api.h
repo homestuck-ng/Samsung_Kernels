@@ -855,17 +855,6 @@ QDF_STATUS wlan_cm_set_roam_band_bitmask(struct wlan_objmgr_psoc *psoc,
 					 uint32_t roam_band_bitmask);
 
 /**
- * wlan_cm_set_btm_config() - Set btm roaming disable flag for vdev
- * @psoc: psoc pointer
- * @vdev_id: vdev id
- * @is_disable_btm: to check whether btm roaming is disabled or not
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS wlan_cm_set_btm_config(struct wlan_objmgr_psoc *psoc,
-				  uint8_t vdev_id, bool is_disable_btm);
-
-/**
  * wlan_cm_set_roam_band_update() - send rso update on set band
  * @psoc: psoc pointer
  * @vdev_id: vdev id
@@ -1077,16 +1066,6 @@ QDF_STATUS
 cm_roam_candidate_event_handler(struct wlan_objmgr_psoc *psoc,
 				struct roam_scan_candidate_frame *candidate);
 
-/**
- * wlan_cm_is_mbo_ap_without_pmf() - Check if the connected AP is MBO without
- *                                   PMF
- * @psoc: PSOC pointer
- * @vdev_id: vdev id
- *
- * Return: True if connected AP is MBO capable without PMF
- */
-bool wlan_cm_is_mbo_ap_without_pmf(struct wlan_objmgr_psoc *psoc,
-				   uint8_t vdev_id);
 #else
 static inline
 void wlan_cm_roam_activate_pcl_per_vdev(struct wlan_objmgr_psoc *psoc,
@@ -1182,13 +1161,6 @@ wlan_cm_set_roam_band_bitmask(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
 	return QDF_STATUS_E_NOSUPPORT;
 }
 
-static inline QDF_STATUS wlan_cm_set_btm_config(struct wlan_objmgr_psoc *psoc,
-						uint8_t vdev_id,
-						bool is_disable_btm)
-{
-	return QDF_STATUS_SUCCESS;
-}
-
 static inline
 uint32_t wlan_cm_get_roam_scan_scheme_bitmap(struct wlan_objmgr_psoc *psoc,
 					     uint8_t vdev_id)
@@ -1259,13 +1231,6 @@ cm_roam_candidate_event_handler(struct wlan_objmgr_psoc *psoc,
 				struct roam_scan_candidate_frame *candidate)
 {
 	return QDF_STATUS_SUCCESS;
-}
-
-static inline
-bool wlan_cm_is_mbo_ap_without_pmf(struct wlan_objmgr_psoc *psoc,
-				   uint8_t vdev_id)
-{
-	return false;
 }
 #endif /* WLAN_FEATURE_ROAM_OFFLOAD */
 
@@ -1575,23 +1540,4 @@ bool wlan_cm_same_band_sta_allowed(struct wlan_objmgr_psoc *psoc);
  * Return: qdf_status
  */
 QDF_STATUS cm_cleanup_mlo_link(struct wlan_objmgr_vdev *vdev);
-
-/**
- * wlan_cm_set_assoc_btm_cap() - Set the assoc BTM capability
- * @vdev: pointer to vdev
- * @val: BTM cap
- *
- * Return: None
- */
-void
-wlan_cm_set_assoc_btm_cap(struct wlan_objmgr_vdev *vdev, bool val);
-
-/**
- * wlan_cm_get_assoc_btm_cap() - Get the assoc BTM capability
- * @vdev: pointer to vdev
- *
- * Return: BTM cap
- */
-bool
-wlan_cm_get_assoc_btm_cap(struct wlan_objmgr_vdev *vdev);
 #endif  /* WLAN_CM_ROAM_API_H__ */

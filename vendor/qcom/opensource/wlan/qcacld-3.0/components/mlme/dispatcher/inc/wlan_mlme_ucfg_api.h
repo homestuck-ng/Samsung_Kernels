@@ -4523,27 +4523,4 @@ ucfg_mlme_get_peer_ch_width(struct wlan_objmgr_psoc *psoc, uint8_t *mac)
  */
 enum wlan_phymode
 ucfg_mlme_get_vdev_phy_mode(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id);
-
-/**
- * ucfg_mlme_get_keepalive_period() - Get keep alive period
- * @vdev: VDEV object
- *
- * Return: Keep alive period.
- */
-static inline
-uint16_t ucfg_mlme_get_keepalive_period(struct wlan_objmgr_vdev *vdev)
-{
-	return wlan_mlme_get_keepalive_period(vdev);
-}
-
-/*
- * ucfg_mlme_get_dfs_discard_mode() - Get the dfs discard mode
- * @psoc: pointer to psoc object
- * @val:  bit mask of mode for which DFS channel need to discard
- *
- * Return: QDF Status
- */
-QDF_STATUS
-ucfg_mlme_get_dfs_discard_mode(struct wlan_objmgr_psoc *psoc,
-			       uint8_t *val);
 #endif /* _WLAN_MLME_UCFG_API_H_ */

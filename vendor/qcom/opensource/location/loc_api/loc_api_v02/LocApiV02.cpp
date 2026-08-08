@@ -11806,6 +11806,11 @@ void LocApiV02 :: setSecGnssConfiguration (const char* sec_ext_config, int32_t l
     loc_param_s_type* sec_param_table = loc_secgps_get_params_table(&table_length);
     loc_update_conf(sec_ext_config, length, sec_param_table, table_length);
 
+    bool isKorFeature = false;
+    const char* sec_sales_code = getSalesCode();
+    isKorFeature = (strncmp(sec_sales_code, "SKT", 3) == 0)||(strncmp(sec_sales_code, "KTT", 3) == 0)
+               ||(strncmp(sec_sales_code, "LGU", 3) == 0)||(strncmp(sec_sales_code, "KOO", 3) == 0);
+
     if (sec_gps_conf_tmp.AGPS_TYPE != sec_gps_conf.AGPS_TYPE
        ||(strcmp(sec_gps_conf_tmp.SUPL_HOST, sec_gps_conf.SUPL_HOST)!=0)
        ||sec_gps_conf_tmp.SUPL_PORT != sec_gps_conf.SUPL_PORT
@@ -11813,11 +11818,19 @@ void LocApiV02 :: setSecGnssConfiguration (const char* sec_ext_config, int32_t l
       len = snprintf(url, sizeof(url), "%s:%u", sec_gps_conf.SUPL_HOST, (unsigned) sec_gps_conf.SUPL_PORT);
       setServerSync(url, len, LOC_AGPS_SUPL_SERVER);
       setCertType(sec_gps_conf.SSL_TYPE);
+    } else if (isKorFeature) {
+      len = snprintf(url, sizeof(url), "%s:%u", sec_gps_conf.SUPL_HOST, (unsigned) sec_gps_conf.SUPL_PORT);
+      setServerSync(url, len, LOC_AGPS_SUPL_SERVER);
+      setCertType(sec_gps_conf.SSL_TYPE);
     }
     if (sec_gps_conf_tmp.SUPL_VERSION != sec_gps_conf.SUPL_VERSION) {
       setSUPLVersionSync((GnssConfigSuplVersion)sec_gps_conf.SUPL_VERSION);
+    } else if (isKorFeature) {
+      setSUPLVersionSync((GnssConfigSuplVersion)sec_gps_conf.SUPL_VERSION);
     }
     if (sec_gps_conf_tmp.SSL != sec_gps_conf.SSL) {
+      setSuplSecurity(sec_gps_conf.SSL);
+    } else if (isKorFeature) {
       setSuplSecurity(sec_gps_conf.SSL);
     }
     if (sec_gps_conf_tmp.AGNSS_PROTOCOL != sec_gps_conf.AGNSS_PROTOCOL) {

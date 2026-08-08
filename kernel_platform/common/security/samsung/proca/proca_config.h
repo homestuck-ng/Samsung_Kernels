@@ -1,4 +1,3 @@
-/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * Memory information needed for address translation in tz driver
  *
@@ -18,12 +17,7 @@
 #ifndef _LINUX_PROCA_MEM_INFO_H
 #define _LINUX_PROCA_MEM_INFO_H
 
-#if defined(CONFIG_PROCA_GKI_20)
-#include "proca.h"
-#else
 #include <linux/proca.h>
-#endif
-
 #include <linux/types.h>
 
 struct memory_range {

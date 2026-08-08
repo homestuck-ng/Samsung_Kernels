@@ -83,18 +83,16 @@ static int32_t star_transceive(void *ctx, uint8_t *cmd, uint32_t cmd_size, uint8
 	data_list_t total_rsp;
 
 	if (ctx == NULL) {
-		ERR("%s: invalid parameter, ctx\n", __func__);
 		return -1;
 	}
 
 	if ((cmd == NULL) || (cmd_size == 0) || (rsp == NULL) || (rsp_size == NULL)) {
-		ERR("%s: invalid parameter, cmd and rsp\n", __func__);
-		return -2;
+		ERR("invalid parameter or no data");
+		return -1;
 	}
 
 	if (cmd_size < APDU_CHAIN_NUM_SIZE) {
-		ERR("%s: invalid cmd_size\n", __func__);
-		return -3;
+		return -1;
 	}
 
 	p_cmd = cmd;
@@ -103,21 +101,20 @@ static int32_t star_transceive(void *ctx, uint8_t *cmd, uint32_t cmd_size, uint8
 	cmd_size -= APDU_CHAIN_NUM_SIZE;
 
 	if (chain_num == 0 || chain_num > APDU_CHAIN_MAX_SIZE) {
-		ERR("%s: invalid chain_num\n", __func__);
-		return -4;
+		return -1;
 	}
 
 	ese_data_init(&total_rsp);
 	for (i = 0; i < chain_num; i++) {
 		if (cmd_size <= APDU_CHAIN_HEADER_SIZE) {
-			ERR("%s: invalid command chain header size\n", __func__);
+			ERR("invalid command chain header size");
 			goto error;
 		}
 
 		BIGENDIAN_TO_UINT32(p_cmd, seq);
 		p_cmd += APDU_CHAIN_SEQ_SIZE;
 		if (seq != i) {
-			ERR("%s: invalid sequence number\n", __func__);
+			ERR("invalid sequence number");
 			goto error;
 		}
 
@@ -127,7 +124,7 @@ static int32_t star_transceive(void *ctx, uint8_t *cmd, uint32_t cmd_size, uint8
 		p_cmd += APDU_CHAIN_EXP_SIZE;
 		cmd_size -= APDU_CHAIN_HEADER_SIZE;
 		if (cmd_size < (data_size + expected_size) || data_size > (data_size + expected_size)) {
-			ERR("%s: invalid send data or expected data size\n", __func__);
+			ERR("invalid send data or expected data size");
 			goto error;
 		}
 
@@ -140,12 +137,12 @@ static int32_t star_transceive(void *ctx, uint8_t *cmd, uint32_t cmd_size, uint8
 
 again:
 		if (iso7816_t1_send(ctx, &cmd_data) != ESESTATUS_SUCCESS) {
-			ERR("%s: failed to send apdu\n", __func__);
+			ERR("failed to send apdu");
 			goto error;
 		}
 
 		if (iso7816_t1_receive(ctx, &rsp_data) != ESESTATUS_SUCCESS) {
-			ERR("%s: failed to receive response\n", __func__);
+			ERR("failed to receive response");
 			if(rsp_data.data) {
 				ESE_FREE(rsp_data.data);
 			}
@@ -159,7 +156,6 @@ again:
 							rsp_data.data + (rsp_data.size - (expected_size - APDU_CHAIN_EXP_FLAG)),
 							(expected_size - APDU_CHAIN_EXP_FLAG)) != 0) {
 				if (ese_data_store(&total_rsp, rsp_data.data, rsp_data.size, 0) != ESESTATUS_SUCCESS) {
-					ERR("%s: 1. invalid store data\n", __func__);
 					goto error;
 				}
 				goto exit;
@@ -168,7 +164,6 @@ again:
 			if (expected_flag & EXPECTED_RESPONSE_AGAIN) {
 				if (rsp_data.size > 2) {
 					if (ese_data_store(&total_rsp, rsp_data.data, rsp_data.size - 2, 0) != ESESTATUS_SUCCESS) {
-						ERR("%s: 2. invalid store data\n", __func__);
 						goto error;
 					}
 				} else {
@@ -184,7 +179,6 @@ again:
 		if (i < (chain_num - 1)) {
 			if (rsp_data.size > 2) {
 				if (ese_data_store(&total_rsp, rsp_data.data, rsp_data.size - 2, 0) != ESESTATUS_SUCCESS) {
-					ERR("%s: 3. invalid store data\n", __func__);
 					goto error;
 				}
 			} else {
@@ -192,7 +186,6 @@ again:
 			}
 		} else {
 			if (ese_data_store(&total_rsp, rsp_data.data, rsp_data.size, 0) != ESESTATUS_SUCCESS) {
-				ERR("%s: 4. invalid store data\n", __func__);
 				goto error;
 			}
 		}
@@ -203,7 +196,7 @@ exit:
 	return 0;
 error:
 	ese_data_delete(&total_rsp);
-	return -5;
+	return -1;
 }
 
 static int star_dev_open(struct inode *inode, struct file *filp)
@@ -212,7 +205,7 @@ static int star_dev_open(struct inode *inode, struct file *filp)
 			sec_star_t, misc);
 	int ret = 0;
 
-	INFO("star_open %d\n", star->access);
+	INFO("star_open\n");
 
 	mutex_lock(&(star->lock));
 
@@ -228,23 +221,20 @@ static int star_dev_open(struct inode *inode, struct file *filp)
 		iso7816_t1_reset(star->protocol);
 
 		ret = star->dev->power_on();
-		if (ret) {
+		if (ret < 0) {
 #ifdef FEATURE_STAR_WAKELOCK
 			if (wake_lock_active(&star->snvm_wake_lock)) {
 				wake_unlock(&star->snvm_wake_lock);
 				INFO("called to snvm_wake_unlock\n");
 			}
 #endif
-			ERR("%s: failed to open star, %d\n", __func__, ret);
+			ERR("%s :failed to open star", __func__);
 			mutex_unlock(&(star->lock));
 			return ret;
 		}
-		star->access = 1;
-	} else {
-		ERR("%s: failed to open star, already opened\n", __func__);
-		mutex_unlock(&(star->lock));
-		return -EBUSY;
 	}
+
+	star->access++;
 
 	mutex_unlock(&(star->lock));
 	return 0;
@@ -255,30 +245,28 @@ static int star_dev_close(struct inode *inode, struct file *filp)
 	sec_star_t *star = (sec_star_t *)filp->private_data;
 	int ret = 0;
 
+	INFO("star_close\n");
 
 	if (star == NULL) {
-		ERR("%s: invalid parameter\n", __func__);
 		return -EINVAL;
 	}
 
 	mutex_lock(&(star->lock));
 
-	INFO("star_close %d\n", star->access);
+	star->access--;
 
-	if (star->access) {
+	if (star->access == 0) {
 		ret = star->dev->power_off();
-		if (ret)
-			ERR("%s: failed power_off, %d\n", __func__, ret);
-
-		star->access = 0;
-	}
+		if (ret < 0)
+			ERR("%s :failed power_off", __func__);
 
 #ifdef FEATURE_STAR_WAKELOCK
-	if (wake_lock_active(&star->snvm_wake_lock)) {
-		wake_unlock(&star->snvm_wake_lock);
-		INFO("called to snvm_wake_unlock\n");
-	}
+		if (wake_lock_active(&star->snvm_wake_lock)) {
+			wake_unlock(&star->snvm_wake_lock);
+			INFO("called to snvm_wake_unlock\n");
+		}
 #endif
+	}
 
 	mutex_unlock(&(star->lock));
 	return ret;
@@ -290,7 +278,6 @@ static long star_dev_ioctl(struct file *filp, unsigned int cmd,
 	sec_star_t *star = (sec_star_t *)filp->private_data;
 
 	if (star == NULL) {
-		ERR("%s: invalid parameter\n", __func__);
 		return -EINVAL;
 	}
 
@@ -340,7 +327,6 @@ static ssize_t star_dev_write(struct file *filp, const char __user *buf, size_t 
 	int ret = -EIO;
 
 	if (star == NULL || count == 0) {
-		ERR("%s: invalid parameter\n", __func__);
 		return -EINVAL;
 	}
 
@@ -355,7 +341,7 @@ static ssize_t star_dev_write(struct file *filp, const char __user *buf, size_t 
 	cmd_size = (uint32_t)count;
 	cmd = ESE_MALLOC(cmd_size);
 	if (cmd == NULL) {
-		ERR("%s: failed to allocate for i2c buf\n", __func__);
+		ERR("failed to allocate for i2c buf\n");
 		mutex_unlock(&(star->lock));
 		return -ENOMEM;
 	}
@@ -367,16 +353,14 @@ static ssize_t star_dev_write(struct file *filp, const char __user *buf, size_t 
 	}
 
 	if (star->direct > 0) {
-		ret = ese_hal_send(star->hal, cmd, cmd_size);
-		if (ret < 0) {
-			ERR("%s: i2c_master_send failed %d\n", __func__, ret);
+		if (ese_hal_send(star->hal, cmd, cmd_size) < 0) {
+			ERR("i2c_master_send failed\n");
 			ret = -EIO;
 			goto error;
 		}
 	} else {
-		ret = star_transceive(star->protocol, cmd, cmd_size, &rsp, &rsp_size);
-		if (ret != ESESTATUS_SUCCESS) {
-			ERR("%s: failed to ese_transceive_chain %d\n", __func__, ret);
+		if (star_transceive(star->protocol, cmd, cmd_size, &rsp, &rsp_size) != ESESTATUS_SUCCESS) {
+			ERR("%s: failed to ese_transceive_chain\n", __func__);
 			ret = -EIO;
 			goto error;
 		}
@@ -396,7 +380,6 @@ static ssize_t star_dev_read(struct file *filp, char __user *buf, size_t count, 
 {
 	sec_star_t *star = (sec_star_t *)filp->private_data;
 	uint8_t *tmp = NULL;
-	int ret = 0;
 
 	if (star == NULL || count == 0) {
 		return -EINVAL;
@@ -410,16 +393,15 @@ static ssize_t star_dev_read(struct file *filp, char __user *buf, size_t count, 
 			return -ENOMEM;
 		}
 
-		ret = ese_hal_receive(star->hal, tmp, count);
-		if (ret < 0) {
-			ERR("%s: i2c_master_recv failed %d\n", __func__, ret);
+		if (ese_hal_receive(star->hal, tmp, count) < 0) {
+			ERR("i2c_master_send failed\n");
 			ESE_FREE(tmp);
 			mutex_unlock(&(star->lock));
 			return -EIO;
 		}
 
 		if (copy_to_user((void __user *)buf, tmp, count) > 0) {
-			ERR("%s: 1. failed to copy_to_user\n", __func__);
+			ERR("copy_to_user failed\n");
 			ESE_FREE(tmp);
 			mutex_unlock(&(star->lock));
 			return -ENOMEM;
@@ -428,13 +410,12 @@ static ssize_t star_dev_read(struct file *filp, char __user *buf, size_t count, 
 		ESE_FREE(tmp);
 	} else {
 		if (star->rsp == NULL || star->rsp_size == 0) {
-			ERR("%s: failed to get rsp\n", __func__);
 			mutex_unlock(&(star->lock));
 			return -ENOSPC;
 		}
 
 		if (star->rsp_size != count) {
-			ERR("%s: mismatch response size\n", __func__);
+			ERR("mismatch response size\n");
 			ESE_FREE(star->rsp);
 			star->rsp = NULL;
 			star->rsp_size = 0;
@@ -443,7 +424,7 @@ static ssize_t star_dev_read(struct file *filp, char __user *buf, size_t count, 
 		}
 
 		if (copy_to_user((void __user *)buf, star->rsp, star->rsp_size) > 0) {
-			ERR("%s: 2. failed to copy_to_user\n", __func__);
+			ERR("copy_to_user failed\n");
 			ESE_FREE(star->rsp);
 			star->rsp = NULL;
 			star->rsp_size = 0;
@@ -479,7 +460,6 @@ sec_star_t *star_open(star_dev_t *dev)
 
 	star = ESE_MALLOC(sizeof(sec_star_t));
 	if (star == NULL) {
-		ERR("%s: failed to allocate memory\n", __func__);
 		return NULL;
 	}
 
@@ -492,14 +472,14 @@ sec_star_t *star_open(star_dev_t *dev)
 
 	star->hal = ese_hal_init(dev->hal_type, dev->client);
 	if (star->hal == NULL) {
-		ERR("%s: failed to init hal\n", __func__);
+		ERR("%s :failed to init hal", __func__);
 		ESE_FREE(star);
 		return NULL;
 	}
 
 	star->protocol = iso7816_t1_init(SEND_ADDRESS, RECEIVE_ADDRESS, star->hal);
 	if (star->protocol == NULL) {
-		ERR("%s: failed to open protocol\n", __func__);
+		ERR("%s :failed to open protocol", __func__);
 		ESE_FREE(star);
 		return NULL;
 	}
@@ -514,7 +494,7 @@ sec_star_t *star_open(star_dev_t *dev)
 	star->misc.fops = &star_misc_fops;
 	ret = misc_register(&(star->misc));
 	if (ret < 0) {
-		ERR("%s: misc_register failed! %d\n", __func__, ret);
+		ERR("misc_register failed! %d\n", ret);
 #ifdef FEATURE_STAR_WAKELOCK
 		wake_lock_destroy(&star->snvm_wake_lock);
 #endif
@@ -532,7 +512,6 @@ void star_close(sec_star_t *star)
 	INFO("Entry : %s\n", __func__);
 
 	if (star == NULL) {
-		ERR("%s: invalid parameter\n", __func__);
 		return;
 	}
 

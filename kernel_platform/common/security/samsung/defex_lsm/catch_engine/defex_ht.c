@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (c) 2018 Samsung Electronics Co., Ltd. All Rights Reserved
  *
@@ -17,7 +16,7 @@
 #include "include/defex_catch_list.h"
 #include "include/defex_internal.h"
 
-#if KERNEL_VER_GTE(4, 11, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
 #include <linux/sched/mm.h>
 #include <linux/sched/task.h>
 #endif
@@ -65,7 +64,7 @@ __visible_for_testing void mem_cache_alloc(void);
 void __init creds_fast_hash_init(void)
 {
 	unsigned int i;
-	static const int sizes[DEFEX_MEM_CACHE_COUNT] __initconst = {
+	static const int sizes[DEFEX_MEM_CACHE_COUNT] __initdata = {
 		sizeof(struct proc_cred_data),
 		sizeof(struct proc_cred_data) + sizeof(struct id_set),
 		sizeof(struct hash_item_struct)
@@ -75,13 +74,12 @@ void __init creds_fast_hash_init(void)
 	for (i = 0; i <= MAX_PID_32; i++)
 		creds_fast_hash[i] = NULL;
 
-	for (i = 0; i < ARRAY_SIZE(sizes); i++) {
+	for(i = 0; i < ARRAY_SIZE(sizes); i++) {
 		snprintf(mem_cache[i].name, sizeof(mem_cache[i].name), "defex%d", i);
-		mem_cache[i].allocator = kmem_cache_create(mem_cache[i].name, sizes[i],
-			0, 0, NULL);
+		mem_cache[i].allocator = kmem_cache_create(mem_cache[i].name, sizes[i], 0, 0, NULL);
 	}
 
-	for (i = 0; i < (DEFEX_MEM_CACHE_SIZE / 2); i++)
+	for(i = 0; i < (DEFEX_MEM_CACHE_SIZE / 2); i++)
 		mem_cache_alloc();
 
 	creds_fast_hash_ready = 1;
@@ -92,10 +90,9 @@ int is_task_creds_ready(void)
 	return creds_fast_hash_ready;
 }
 
-__visible_for_testing void *mem_cache_get(int cache_number)
+__visible_for_testing inline void *mem_cache_get(int cache_number)
 {
 	int n;
-
 	n = atomic_read(&mem_cache[cache_number].count);
 	if (n) {
 		atomic_dec(&mem_cache[cache_number].count);
@@ -104,10 +101,9 @@ __visible_for_testing void *mem_cache_get(int cache_number)
 	return NULL;
 }
 
-__visible_for_testing void *mem_cache_reclaim(int cache_number, void *ptr)
+__visible_for_testing inline void *mem_cache_reclaim(int cache_number, void *ptr)
 {
 	int n;
-
 	n = atomic_read(&mem_cache[cache_number].count);
 	if (n < DEFEX_MEM_CACHE_SIZE) {
 		atomic_inc(&mem_cache[cache_number].count);
@@ -124,12 +120,11 @@ __visible_for_testing void mem_cache_alloc(void)
 	unsigned long flags;
 	void *mem_block[DEFEX_MEM_CACHE_COUNT];
 
-	for (i = 0; i < DEFEX_MEM_CACHE_COUNT; i++) {
+	for(i = 0; i < DEFEX_MEM_CACHE_COUNT; i++) {
 		mem_block[i] = NULL;
 		n = atomic_read(&mem_cache[i].count);
 		if (n < (DEFEX_MEM_CACHE_SIZE / 2)) {
-			mem_block[i] = kmem_cache_alloc(mem_cache[i].allocator,
-				in_atomic() ? GFP_ATOMIC : GFP_KERNEL);
+			mem_block[i] = kmem_cache_alloc(mem_cache[i].allocator, in_atomic() ? GFP_ATOMIC:GFP_KERNEL);
 			mem_allocated++;
 		}
 	}
@@ -138,7 +133,7 @@ __visible_for_testing void mem_cache_alloc(void)
 		return;
 
 	spin_lock_irqsave(&creds_hash_update_lock, flags);
-	for (i = 0; i < DEFEX_MEM_CACHE_COUNT; i++) {
+	for(i = 0; i < DEFEX_MEM_CACHE_COUNT; i++) {
 		n = atomic_read(&mem_cache[i].count);
 		if (mem_block[i] && n < DEFEX_MEM_CACHE_SIZE) {
 			mem_cache[i].mem_cache_array[n] = mem_block[i];
@@ -152,9 +147,10 @@ __visible_for_testing void mem_cache_alloc(void)
 	if (!mem_allocated)
 		return;
 
-	for (i = 0; i < DEFEX_MEM_CACHE_COUNT; i++) {
-		if (mem_block[i])
+	for(i = 0; i < DEFEX_MEM_CACHE_COUNT; i++) {
+		if (mem_block[i]) {
 			kmem_cache_free(mem_cache[i].allocator, mem_block[i]);
+		}
 	}
 }
 
@@ -198,8 +194,7 @@ __visible_for_testing struct proc_cred_data **get_cred_ptr(int id)
 	return cred_ptr;
 }
 
-__visible_for_testing void set_cred_data(int id, struct proc_cred_data **cred_ptr,
-		struct proc_cred_data *cred_data)
+__visible_for_testing void set_cred_data(int id, struct proc_cred_data **cred_ptr, struct proc_cred_data *cred_data)
 {
 	struct hash_item_struct *obj;
 
@@ -219,8 +214,7 @@ __visible_for_testing void set_cred_data(int id, struct proc_cred_data **cred_pt
 	}
 }
 
-void get_task_creds(struct task_struct *p, unsigned int *uid_ptr, unsigned int *fsuid_ptr,
-		unsigned int *egid_ptr, unsigned short *cred_flags_ptr)
+void get_task_creds(struct task_struct *p, unsigned int *uid_ptr, unsigned int *fsuid_ptr, unsigned int *egid_ptr, unsigned short *cred_flags_ptr)
 {
 	struct proc_cred_data *cred_data, *thread_cred_data;
 	struct id_set *ids_ptr;
@@ -233,7 +227,7 @@ void get_task_creds(struct task_struct *p, unsigned int *uid_ptr, unsigned int *
 	cred_data = get_cred_data(tgid);
 	if (cred_data) {
 		if (tgid == pid) {
-			ids_ptr = (cred_data->cred_flags & CRED_FLAGS_MAIN_UPDATED) ?
+			ids_ptr = (cred_data->cred_flags & CRED_FLAGS_MAIN_UPDATED) ? \
 				(&cred_data->main_ids[0]) : (&cred_data->default_ids);
 		} else {
 			if (cred_data->cred_flags & CRED_FLAGS_SUB_UPDATED) {
@@ -252,8 +246,7 @@ void get_task_creds(struct task_struct *p, unsigned int *uid_ptr, unsigned int *
 	*cred_flags_ptr = cred_flags;
 }
 
-int set_task_creds(struct task_struct *p, unsigned int uid, unsigned int fsuid,
-		unsigned int egid, unsigned short cred_flags)
+int set_task_creds(struct task_struct *p, unsigned int uid, unsigned int fsuid, unsigned int egid, unsigned short cred_flags)
 {
 	struct proc_cred_data *cred_data = NULL, *tmp_data, **cred_ptr;
 	struct id_set *ids_ptr;
@@ -355,13 +348,11 @@ void set_task_creds_tcnt(struct task_struct *p, int addition)
 		if (!tgid_cred_data->tcnt) {
 			*cred_ptr = NULL;
 			/* Return to pre-allocated pool, if possible */
-			free_buff2 = mem_cache_reclaim((tgid_cred_data->cred_flags
-				& CRED_FLAGS_MAIN_UPDATED) ?
+			free_buff2 = mem_cache_reclaim((tgid_cred_data->cred_flags & CRED_FLAGS_MAIN_UPDATED) ? \
 				CACHE_CRED_DATA_ID : CACHE_CRED_DATA, tgid_cred_data);
 			/* Remove the process's hash container */
 			if (tgid > MAX_PID_32) {
-				tgid_obj = container_of(cred_ptr, struct hash_item_struct,
-					cred_data);
+				tgid_obj = container_of(cred_ptr, struct hash_item_struct, cred_data);
 				hash_del(&tgid_obj->node);
 				/* Return to pre-allocated pool, if possible */
 				tgid_obj = mem_cache_reclaim(CACHE_HTABLE_ITEM, tgid_obj);
@@ -373,12 +364,13 @@ void set_task_creds_tcnt(struct task_struct *p, int addition)
 	if (free_buff1)
 		kmem_cache_free(mem_cache[CACHE_CRED_DATA].allocator, free_buff1);
 	if (free_buff2)
-		kmem_cache_free(mem_cache[(free_buff2->cred_flags & CRED_FLAGS_MAIN_UPDATED) ?
+		kmem_cache_free(mem_cache[(free_buff2->cred_flags & CRED_FLAGS_MAIN_UPDATED) ? \
 			CACHE_CRED_DATA_ID : CACHE_CRED_DATA].allocator, free_buff2);
 	if (pid_obj)
 		kmem_cache_free(mem_cache[CACHE_HTABLE_ITEM].allocator, pid_obj);
 	if (tgid_obj)
 		kmem_cache_free(mem_cache[CACHE_HTABLE_ITEM].allocator, tgid_obj);
+	return;
 }
 
 #else

@@ -1,4 +1,3 @@
-/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * DB with PROCA certificates
  *
@@ -49,7 +48,6 @@ enum db_status {
 	NOT_READY,
 	INITED,
 	ABSENT,
-	FAILED
 };
 
 struct certificates_db {
@@ -73,9 +71,7 @@ void deinit_proca_db(struct certificates_db *db);
 int load_db(const char *file_path,
 		struct certificates_db *proca_db);
 
-int load_all_db(void);
-
-int proca_digsig_verify(const char *signature, int sig_len,
+int proca_digsig_verify(const char *signature, int sig_len, 
 			const char *hash, int hash_len, uint32_t key_id);
 
 int __init proca_certificate_db_init(void);
@@ -127,6 +123,6 @@ bool proca_is_certificate_present_db(struct file *file);
  * Return: certificate_entry if certificate presents or NULL if certificate for file not found.
  */
 struct certificate_entry *proca_certificate_db_find_entry(struct certificates_db *db,
-									const char *path);
+															const char *path);
 
 #endif /* _LINUX_PROCA_CERTIFICATE_DB_H */

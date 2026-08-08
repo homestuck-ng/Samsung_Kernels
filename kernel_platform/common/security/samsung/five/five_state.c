@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * FIVE State machine
  *
@@ -20,6 +19,12 @@
 #include "five_state.h"
 #include "five_hooks.h"
 #include "five_cache.h"
+#ifndef FIVE_KUNIT_ENABLED
+#include "five_dsms.h"
+#else
+void five_dsms_reset_integrity(const char *task_name, int result,
+				const char *file_name);
+#endif
 #include "five_testing.h"
 
 enum task_integrity_state_cause {
@@ -197,7 +202,7 @@ inline int integrity_label_cmp(struct integrity_label *l1,
 
 __visible_for_testing
 int verify_or_update_label(struct task_integrity *intg,
-		struct five_iint_cache *iint)
+		struct integrity_iint_cache *iint)
 {
 	struct integrity_label *l;
 	struct integrity_label *file_label = iint->five_label;
@@ -239,7 +244,7 @@ out:
 }
 
 __visible_for_testing
-bool set_first_state(struct five_iint_cache *iint,
+bool set_first_state(struct integrity_iint_cache *iint,
 				struct task_integrity *integrity,
 				struct task_verification_result *result)
 {
@@ -299,7 +304,7 @@ bool set_first_state(struct five_iint_cache *iint,
 }
 
 __visible_for_testing
-bool set_next_state(struct five_iint_cache *iint,
+bool set_next_state(struct integrity_iint_cache *iint,
 			   struct task_integrity *integrity,
 			   struct task_verification_result *result)
 {
@@ -418,7 +423,7 @@ out:
 void five_state_proceed(struct task_integrity *integrity,
 			struct file_verification_result *file_result)
 {
-	struct five_iint_cache *iint = file_result->iint;
+	struct integrity_iint_cache *iint = file_result->iint;
 	enum five_hooks fn = file_result->fn;
 	struct task_struct *task = file_result->task;
 	struct file *file = file_result->file;
@@ -439,6 +444,20 @@ void five_state_proceed(struct task_integrity *integrity,
 				state_to_reason_cause(task_result.cause), file);
 			five_hook_integrity_reset(task, file,
 				state_to_reason_cause(task_result.cause));
+
+			if  (fn != BPRM_CHECK) {
+				char comm[TASK_COMM_LEN];
+				char filename[NAME_MAX];
+				char *pathbuf = NULL;
+
+				five_dsms_reset_integrity(
+					get_task_comm(comm, task),
+					task_result.cause,
+					five_d_path(&file->f_path, &pathbuf,
+						    filename));
+				if (pathbuf)
+					__putname(pathbuf);
+			}
 		}
 		five_audit_verbose(task, file, five_get_string_fn(fn),
 			task_result.prev_tint, task_result.new_tint,

@@ -103,14 +103,6 @@
                     <bit_width>16</bit_width>
                     <snd_device_name>vr-main-mic</snd_device_name>
                 </custom-config>
-                <custom-config key="perform">
-                    <bit_width>16</bit_width>
-                    <snd_device_name>voice-perf-main-mic</snd_device_name>
-                </custom-config>
-                <custom-config key="perform_dual">
-                    <channels>2</channels>
-                    <snd_device_name>voice-perf-dual-mic</snd_device_name>
-                </custom-config>
                 <custom-config key="vr_lowpower">
                     <bit_width>16</bit_width>
                     <snd_device_name>vr-lowpower-main-mic</snd_device_name>
@@ -225,20 +217,9 @@
                 <custom-config key="vr">
                     <snd_device_name>vr-main-mic</snd_device_name>
                 </custom-config>
-                <custom-config key="perform">
-                    <snd_device_name>voice-perf-main-mic</snd_device_name>
-                </custom-config>
-                <custom-config key="perform_dual">
-                    <channels>2</channels>
-                    <snd_device_name>voice-perf-dual-mic</snd_device_name>
-                </custom-config>
             </usecase>
             <usecase>
                 <name>PAL_STREAM_RAW</name>
-                <custom-config key="perform_dual">
-                    <channels>2</channels>
-                    <snd_device_name>voice-perf-dual-mic</snd_device_name>
-                </custom-config>
                 <custom-config key="unprocessed-hdr-mic-landscape">
                     <channels>4</channels>
                     <snd_device_name>unprocessed-hdr-mic-landscape</snd_device_name>
@@ -261,9 +242,6 @@
                 <snd_device_name>rec-main-mic</snd_device_name>
                 <custom-config key="vr">
                     <snd_device_name>vr-main-mic</snd_device_name>
-                </custom-config>
-                <custom-config key="perform">
-                    <snd_device_name>voice-perf-main-mic</snd_device_name>
                 </custom-config>
             </usecase>
             <ec_rx_device>
@@ -318,11 +296,6 @@
                     <bit_width>16</bit_width>
                     <snd_device_name>vr-dual-mic</snd_device_name>
                 </custom-config>
-                <custom-config key="perform_dual">
-                    <channels>2</channels>
-                    <bit_width>16</bit_width>
-                    <snd_device_name>voice-perf-dual-mic</snd_device_name>
-                </custom-config>
                 <custom-config key="vr_farfield">
                     <channels>2</channels>
                     <bit_width>16</bit_width>
@@ -337,26 +310,6 @@
                     <channels>2</channels>
                     <bit_width>16</bit_width>
                     <snd_device_name>bargein-tts-speaker-mic</snd_device_name>
-                </custom-config>
-                <custom-config key="interpreter_listen_spk">
-                    <channels>2</channels>
-                    <bit_width>24</bit_width>
-                    <snd_device_name>interpreter-listen-speaker-mic</snd_device_name>
-                </custom-config>
-                <custom-config key="interpreter_listen_usb">
-                    <channels>2</channels>
-                    <bit_width>24</bit_width>
-                    <snd_device_name>interpreter-listen-usb-headset-mic</snd_device_name>
-                </custom-config>
-                <custom-config key="interpreter_listen_bt">
-                    <channels>2</channels>
-                    <bit_width>24</bit_width>
-                    <snd_device_name>interpreter-listen-bt-mic</snd_device_name>
-                </custom-config>
-                <custom-config key="interpreter_conv_spk">
-                    <channels>2</channels>
-                    <bit_width>24</bit_width>
-                    <snd_device_name>interpreter-conv-speaker-mic</snd_device_name>
                 </custom-config>
                 <custom-config key="karaoke">
                     <bit_width>16</bit_width>
@@ -482,14 +435,6 @@
                     <channels>1</channels>
                     <snd_device_name>vr-sub-mic</snd_device_name>
                 </custom-config>
-                <custom-config key="perform">
-                    <channels>1</channels>
-                    <snd_device_name>voice-perf-sub-mic</snd_device_name>
-                </custom-config>
-                <custom-config key="perform_dual">
-                    <channels>2</channels>
-                    <snd_device_name>voice-perf-dual-mic</snd_device_name>
-                </custom-config>
                 <custom-config key="karaoke">
                     <channels>1</channels>
                     <snd_device_name>karaoke-sub-mic</snd_device_name>
@@ -500,9 +445,6 @@
                 <id>PAL_DEVICE_OUT_AUX_DIGITAL</id>
                 <id>PAL_DEVICE_OUT_HDMI</id>
                 <id>PAL_DEVICE_OUT_AUX_DIGITAL_1</id>
-                <id>PAL_DEVICE_OUT_BLUETOOTH_A2DP</id>
-                <id>PAL_DEVICE_OUT_BLUETOOTH_BLE</id>
-                <id>PAL_DEVICE_OUT_USB_HEADSET</id>
             </ec_rx_device>
         </in-device>
         <in-device>
@@ -519,10 +461,6 @@
                 <snd_device_name>rec-headset-mic</snd_device_name>
                 <custom-config key="vr">
                     <snd_device_name>vr-headset-mic</snd_device_name>
-                </custom-config>
-                <custom-config key="perform">
-                    <ec_enable>0</ec_enable>
-                    <snd_device_name>voice-perf-headset-mic</snd_device_name>
                 </custom-config>
                 <custom-config key="bargein_aec">
                     <snd_device_name>bargein-aec-headset-mic</snd_device_name>
@@ -564,18 +502,12 @@
                 <custom-config key="vr">
                     <snd_device_name>vr-headset-mic</snd_device_name>
                 </custom-config>
-                <custom-config key="perform">
-                    <snd_device_name>voice-perf-headset-mic</snd_device_name>
-                </custom-config>
             </usecase>
             <usecase>
                 <name>PAL_STREAM_LOOPBACK</name>
                 <snd_device_name>rec-headset-mic</snd_device_name>
                 <custom-config key="vr">
                     <snd_device_name>vr-headset-mic</snd_device_name>
-                </custom-config>
-                <custom-config key="perform">
-                    <snd_device_name>voice-perf-headset-mic</snd_device_name>
                 </custom-config>
             </usecase>
             <ec_rx_device>
@@ -669,17 +601,11 @@
                 <custom-config key="vr">
                     <snd_device_name>vr-usb-headset-mic</snd_device_name>
                 </custom-config>
-                <custom-config key="perform">
-                    <snd_device_name>voice-perf-usb-headset-mic</snd_device_name>
-                </custom-config>
                 <custom-config key="bargein_aec">
                     <snd_device_name>bargein-aec-usb-headset-mic</snd_device_name>
                 </custom-config>
                 <custom-config key="bargein_tts">
                     <snd_device_name>bargein-tts-usb-headset-mic</snd_device_name>
-                </custom-config>
-                <custom-config key="interpreter_conv_usb">
-                    <snd_device_name>interpreter-conv-usb-headset-mic</snd_device_name>
                 </custom-config>
             </usecase>
             <usecase>
@@ -703,9 +629,6 @@
                 <custom-config key="vr">
                     <snd_device_name>vr-usb-headset-mic</snd_device_name>
                 </custom-config>
-                <custom-config key="perform">
-                    <snd_device_name>voice-perf-usb-headset-mic</snd_device_name>
-                </custom-config>
             </usecase>
             <usecase>
                 <name>PAL_STREAM_LOOPBACK</name>
@@ -715,9 +638,6 @@
                 </custom-config>
                 <custom-config key="vr">
                     <snd_device_name>vr-usb-headset-mic</snd_device_name>
-                </custom-config>
-                <custom-config key="perform">
-                    <snd_device_name>voice-perf-usb-headset-mic</snd_device_name>
                 </custom-config>
             </usecase>
             <ec_rx_device>

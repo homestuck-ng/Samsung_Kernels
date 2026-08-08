@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (c) 2020 Samsung Electronics Co., Ltd. All Rights Reserved
  *
@@ -6,7 +5,6 @@
  * under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation.
  */
-
 #include <linux/key-type.h>
 #include <crypto/public_key.h>
 #include <crypto/hash_info.h>
@@ -211,8 +209,8 @@ static void five_keyring_request_key_returns_success_test(
 	KUNIT_EXPECT_PTR_EQ(test, five_keyring, (struct key *)CORRECT_PTR);
 }
 
-// test 'asymmetric_verify with existing five_keyring' and
-// 'request_asymmetric_key returns error' scenario
+
+// test 'asymmetric_verify with existing five_keyring' and 'request_asymmetric_key returns error' scenario
 static void five_keyring_request_asymmetric_key_return_error_test(
 		struct kunit *test)
 {
@@ -244,8 +242,7 @@ static void five_keyring_request_asymmetric_key_return_error_test(
 		five_digsig_verify(cert, NULL, 0), (int)WRONG_PTR);
 }
 
-// test 'asymmetric_verify with existing five_keyring' and
-// 'request_asymmetric_key returns success' scenario
+// test 'asymmetric_verify with existing five_keyring' and 'request_asymmetric_key returns success' scenario
 static void five_keyring_request_asymmetric_key_returns_success_test(
 		struct kunit *test)
 {

@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
 /* Routines for handling archival-like files where each new contents is
  * appended and linked backwards - memory-only variants.
  */

@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (c) 2020-2022 Samsung Electronics Co., Ltd. All Rights Reserved
  *
@@ -10,7 +9,6 @@
 #include <linux/compiler.h>
 #include <linux/string.h>
 #include <linux/types.h>
-#include <linux/kobject.h> // struct kset is required by include/defex_debug.h
 
 #include "include/defex_debug.h"
 #include "include/defex_rules.h"
@@ -21,6 +19,13 @@
 #include "include/ptree.h"
 
 #define DTM_ANY_VALUE "*" /* wildcard value for files and arguments */
+#if defined(DEFEX_TM_DEFAULT_POLICY_ENABLE) || defined(DEFEX_KERNEL_ONLY)
+/* Kernel-only builds don't use DEFEX's dynamic policy loading mechanism. */
+#define USE_EMBEDDED_POLICY
+static struct PPTree embedded_header;
+/* File with hardcoded policy */
+#include "dtm_engine_defaultpolicy.h"
+#endif
 
 #ifdef DEFEX_KUNIT_ENABLED
 static struct PPTree override_header, *pptree_override;
@@ -28,10 +33,10 @@ static struct PPTree override_header, *pptree_override;
 void dtm_engine_override_data(const unsigned char *p)
 {
 	if (p) {
-		defex_log_warn("DTM: data overridden");
+		defex_log_warn("Dtm_engine data overridden");
 		pptree_set_data(pptree_override = &override_header, p);
 	} else {
-		defex_log_warn("DTM: override data back to normal");
+		defex_log_warn("Dtm_engine override data back to normal");
 		pptree_override = 0;
 	}
 }
@@ -60,30 +65,26 @@ int dtm_enforce(struct dtm_context *context)
 	static char first_run = 1; /* flag for one-time policy actions */
 
 	if (first_run) {
-		// Minimum log: make obvious DTM is active
 		if (dtm_tree.data)
-			defex_log_warn("DTM: policy found, "
-#ifdef DEFEX_PERMISSIVE_TM
-					"permissive"
-#else
-					"enforcing"
-#endif
-				" mode");
+			defex_log_info("DTM engine: policy found");
 		else
-			defex_log_warn("DTM: dynamic policy not loaded");
+			defex_log_warn("DTM engine: dynamic policy not loaded");
 		first_run = 0;
+#ifdef USE_EMBEDDED_POLICY
+		pptree_set_data(&embedded_header, dtm_engine_defaultpolicy);
+#endif
 	}
 
-	dtm_trace("Pid : %d %d", current->tgid, current->pid);
+	defex_log_info("Pid : %d %d", current->tgid, current->pid);
 
 	if (!context || unlikely(!is_dtm_context_valid(context))) {
-		dtm_trace("(0) TMED no or invalid context");
+		defex_log_info("(0) TMED no or invalid context");
 		return DTM_DENY;
 	}
 	/* Check callee */
 	callee_path = dtm_get_callee_path(context);
 	if (unlikely(!callee_path)) {
-		dtm_trace("(1) TMED null callee");
+		defex_log_info("(1) TMED null callee");
 		return DTM_DENY;
 	}
 
@@ -92,9 +93,13 @@ int dtm_enforce(struct dtm_context *context)
 		pptree = pptree_override;
 	else
 #endif
+#ifdef USE_EMBEDDED_POLICY /* try dynamic policy first, use embedded if not found */
+		pptree = dtm_tree.data ? &dtm_tree : &embedded_header;
+#else /* only dynamically loaded policy is acceptable */
 		pptree = &dtm_tree;
+#endif
 	if (!pptree->data) { /* Should never happen */
-		defex_log_warn("(0) TME: neither dynamic nor hardcoded rules loaded");
+		defex_log_warn("(0) DTM engine: neither dynamic nor hardcoded rules loaded");
 		return DTM_ALLOW;
 	}
 	memset(&pp_ctx, 0, sizeof(pp_ctx));
@@ -102,18 +107,18 @@ int dtm_enforce(struct dtm_context *context)
 			       *callee_path == '/' ?
 			       callee_path + 1 : callee_path, '/', &pp_ctx) &&
 	      (pp_ctx.types & PTREE_DATA_PATH))) {
-		dtm_trace("(2) TME callee '%s' not found", callee_path);
+		defex_log_info("(2) TME callee '%s' not found", callee_path);
 		return DTM_ALLOW;
 	}
 	/* Check caller */
 	caller_path = dtm_get_caller_path(context);
 	if (unlikely(!caller_path)) {
-		dtm_trace("(3) TMED callee '%s': null caller", callee_path);
+		defex_log_info("(3) TMED callee '%s': null caller", callee_path);
 		return DTM_DENY;
 	}
 	if (!(pptree_find_path(pptree, caller_path + 1, '/', &pp_ctx) &&
 	      (pp_ctx.types & PTREE_DATA_PATH))) {
-		dtm_trace("(4) TMED callee '%s': caller '%s' not found",
+		defex_log_info("(4) TMED callee '%s': caller '%s' not found",
 			callee_path, caller_path);
 		dtm_report_violation(DTM_CALLER_VIOLATION, context);
 		return DTM_DENY;
@@ -121,20 +126,15 @@ int dtm_enforce(struct dtm_context *context)
 	/* Check program, if any */
 	program_name = dtm_get_program_name(context);
 	if (!program_name) {
-		dtm_trace("(5) TMED callee '%s', caller '%s': null program",
+		defex_log_info("(5) TMED callee '%s', caller '%s': null program",
 			callee_path, caller_path);
 		return DTM_DENY;
 	}
 	pp_ctx.types |= PTREE_FIND_PEEK;
 
 	// Try exact match first
-	/* Originally, the 2nd and 3rd args to pptree_find_path below were
-	 * "program_name == '/' ? program_name + 1 : program_name" and "'/'"
-	 * respectively. However, to keep compatibility with policy entries
-	 * which record only a program's basename, we strip the directory part
-	 * at build time, and correspondingly here test only the basename.
-	 */
-	if (pptree_find_path(pptree, program_name, 0, &pp_ctx) &&
+	if (pptree_find_path(pptree, *program_name == '/'
+				? program_name + 1 : program_name, '/', &pp_ctx) &&
 		      (pp_ctx.types & PTREE_DATA_INT2)) {
 		pp_ctx.types |= PTREE_FIND_PEEKED;
 		pptree_find_path(pptree, "", 0, &pp_ctx);
@@ -143,10 +143,10 @@ int dtm_enforce(struct dtm_context *context)
 		// now try '*'
 		pp_ctx.types &= ~PTREE_FIND_PEEK;
 		if (pptree_find_path(pptree, DTM_ANY_VALUE, 0, &pp_ctx)) {
-			dtm_trace("[TME callee '%s', caller '%s': program may be '*...'",
+			defex_log_info("[TME callee '%s', caller '%s': program may be '*...'",
 			       callee_path, caller_path);
 		} else {
-			dtm_trace("(6) TMED callee '%s', caller '%s': program '%s' not found",
+			defex_log_info("(6) TMED callee '%s', caller '%s': program '%s' not found",
 				callee_path, caller_path, program_name);
 			dtm_report_violation(DTM_PROGRAM_VIOLATION, context);
 			return DTM_DENY;
@@ -156,8 +156,7 @@ int dtm_enforce(struct dtm_context *context)
 	if (pp_ctx.types & PTREE_DATA_INT2) {
 		ret = dtm_check_stdin(context, pp_ctx.value.int2);
 		if (unlikely(ret != DTM_ALLOW)) {
-			dtm_trace("(7) TMED callee '%s', caller '%s', program '%s':"
-				" stdin mode %d, should be %d",
+			defex_log_info("(7) TMED callee '%s', caller '%s', program '%s': stdin mode %d, should be %d",
 				callee_path, caller_path,
 				program_name ? program_name : "(null)",
 				dtm_get_stdin_mode_bit(context), pp_ctx.value.int2);
@@ -167,14 +166,7 @@ int dtm_enforce(struct dtm_context *context)
 	/* Check program arguments, if any */
 	pp_ctx.types |= PTREE_FIND_CONTINUE;
 	pp_ctx.types &= ~PTREE_FIND_PEEKED;
-	call_argc = context->callee_argc;
-	if (call_argc > DTM_MAX_ARGC) {
-		dtm_trace("%s'%s', caller '%s': program '%s' %d arguments: %d ignored",
-			"(8A) TME callee ", callee_path, caller_path, program_name,
-			call_argc, call_argc - DTM_MAX_ARGC);
-		call_argc = DTM_MAX_ARGC;
-	}
-	for (argc = 1;
+	for (call_argc = context->callee_argc, argc = 1;
 	     argc < call_argc && pptree_child_count(pptree, &pp_ctx);
 	     ++argc) {
 		pp_ctx.types |= PTREE_FIND_PEEK;
@@ -184,9 +176,14 @@ int dtm_enforce(struct dtm_context *context)
 			pptree_find_path(pptree, "", 0, &pp_ctx);
 			pp_ctx.types &= ~PTREE_FIND_PEEKED;
 		} else {
-			dtm_trace(
-				"(9) TMED callee '%s', caller '%s', program '%s':"
-				" argument '%s' (%d of %d) not found",
+			pp_ctx.types &= ~PTREE_FIND_PEEK;
+			if (pptree_find_path(pptree, DTM_ANY_VALUE, 0, &pp_ctx)) {
+				defex_log_info("(8) TME callee '%s', caller '%s', program '%s': any arguments accepted",
+					callee_path, caller_path, program_name);
+				return DTM_ALLOW;
+			}
+			defex_log_info(
+				"(9) TMED callee '%s', caller '%s', program '%s': argument '%s' (%d of %d) not found",
 				callee_path, caller_path, program_name,
 				argument_value ? argument_value : "(null)",
 				argc, call_argc);
@@ -194,28 +191,23 @@ int dtm_enforce(struct dtm_context *context)
 			return DTM_DENY;
 		}
 		if (pp_ctx.value.bits) {
-			dtm_trace("(10) TME callee '%s', caller '%s', program '%s':"
-				" argument '%s' accepts '*'",
+			defex_log_info("(10) TME callee '%s', caller '%s', program '%s': argument '%s' accepts '*'",
 				callee_path, caller_path, program_name,
 				argument_value ? argument_value : "(null)");
 			return DTM_ALLOW;
 		}
 	}
-	if (call_argc > 1 && pptree_get_offset(pptree, &pp_ctx) &&
+	if (call_argc > 1 && pptree_child_count(pptree, &pp_ctx) &&
 		!pptree_find_path(pptree, DTM_ANY_VALUE, 0, &pp_ctx)) {
-		dtm_trace(
-			"(11) TMED callee '%s', caller '%s', program '%s': %d argument(s),"
-				" more required",
+		defex_log_info(
+			"(11) TMED callee '%s', caller '%s', program '%s': %d argument(s), more required",
 			callee_path, caller_path, program_name,
 			call_argc);
 		dtm_report_violation(DTM_ARGUMENTS_VIOLATION, context);
 		return DTM_DENY;
 	}
-#if DTM_TRACE
-	if (call_argc && argc == call_argc)
-		dtm_trace("(12) TME callee '%s', caller '%s', program '%s':"
-			" all %d argument(s) checked",
+	if (call_argc && argc > call_argc)
+		defex_log_info("TME callee '%s', caller '%s', program '%s': all %d argument(s) checked",
 			callee_path, caller_path, program_name, call_argc);
-#endif
 	return DTM_ALLOW;
 }

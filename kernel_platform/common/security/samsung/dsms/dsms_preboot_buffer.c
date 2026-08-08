@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (c) 2021 Samsung Electronics Co., Ltd. All Rights Reserved
  *
@@ -50,7 +49,7 @@ __visible_for_testing struct dsms_message *create_message(const char *feature_co
 		kfree(message);
 		return NULL;
 	}
-	strscpy(message->feature_code, feature_code, sizeof(char) *
+	strncpy(message->feature_code, feature_code, sizeof(char) *
 						     FEATURE_CODE_LENGTH);
 	message->feature_code[FEATURE_CODE_LENGTH] = '\0';
 
@@ -62,7 +61,7 @@ __visible_for_testing struct dsms_message *create_message(const char *feature_co
 		kfree(message);
 		return NULL;
 	}
-	strscpy(message->detail, detail, len_detail);
+	strncpy(message->detail, detail, len_detail);
 	message->detail[len_detail - 1] = '\0';
 	message->value = value;
 
